@@ -27,6 +27,5 @@ public class AmuseTest {
 
     @Test
     public void test01() {
-        fail("ow no!");
     }
 }
