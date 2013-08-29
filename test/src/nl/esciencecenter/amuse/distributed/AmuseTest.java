@@ -19,14 +19,12 @@ import static org.junit.Assert.fail;
 
 import org.junit.Test;
 
-
 /**
  * @author Niels Drost
  *
  */
 public class AmuseTest {
 
-    
     @Test
     public void test01() {
         fail("ow no!");
