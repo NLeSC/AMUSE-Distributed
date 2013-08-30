@@ -72,7 +72,8 @@ public class Reservation {
         result.setExecutable(configuration.getJava());
 
         List<String> classpath = result.getJavaClasspath();
-        classpath.add(configuration.getAmuseHome().getPath() + "/sandbox/ndrost/distributed/distributed-server.jar");
+        classpath.add(configuration.getAmuseHome().getPath() + "/sandbox/ndrost/distributed/src/dist/*");
+        classpath.add(configuration.getAmuseHome().getPath() + "/sandbox/ndrost/distributed/worker.jar");
         classpath.add(configuration.getAmuseHome().getPath() + "/sandbox/ndrost/distributed");
 
         result.setJavaMain(Pilot.class.getCanonicalName());
