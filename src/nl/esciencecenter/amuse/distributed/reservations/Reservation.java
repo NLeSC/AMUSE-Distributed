@@ -18,6 +18,7 @@ package nl.esciencecenter.amuse.distributed.reservations;
 import java.io.File;
 import java.net.URI;
 import java.util.List;
+import java.util.UUID;
 
 import nl.esciencecenter.amuse.distributed.AmuseConfiguration;
 import nl.esciencecenter.amuse.distributed.DistributedAmuseException;
@@ -55,8 +56,9 @@ public class Reservation {
             throws DistributedAmuseException {
         JavaJobDescription result = new JavaJobDescription();
 
-        result.setStdout("reservation-" + id + ".out");
-        result.setStderr("reservation-" + id + ".err");
+        UUID uniqueID = UUID.randomUUID();
+        result.setStdout(uniqueID.toString() + "-reservation-" + id + ".out");
+        result.setStderr(uniqueID.toString() + "-reservation-" + id + ".err");
 
         result.setInteractive(false);
 
