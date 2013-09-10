@@ -42,7 +42,7 @@ public class DistributedAmuseIT {
     public void test02_addResources() throws DistributedAmuseException {
             DistributedAmuse da = new DistributedAmuse("/home/niels/workspace/amuse/sandbox/ndrost/distributed", "/home/niels/workspace/amuse", 8678);
             
-        da.resourceManager().newResource("some.name", "fs0.das4.cs.vu.nl", "/home/niels/amuse", 22, "niels", "sge", true);
+        da.resourceManager().newResource("some.name", "niels@fs0.das4.cs.vu.nl", "/home/niels/amuse", "sge", true);
         
         try {
             Thread.sleep(60000);

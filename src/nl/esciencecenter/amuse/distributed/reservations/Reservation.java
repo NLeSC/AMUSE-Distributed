@@ -153,14 +153,11 @@ public class Reservation {
             Scheduler scheduler;
 
             if (resource.isLocal()) {
-                scheduler = octopus.jobs().getLocalScheduler();
+                scheduler = octopus.jobs().newScheduler("local", null, null, null);
             } else {
-                Credential credential = octopus.credentials().getDefaultCredential("ssh");
+                Credential credential = octopus.credentials().getDefaultCredential(resource.getSchedulerType());
 
-                URI uri = new URI(resource.getSchedulerType(), resource.getUsername(), resource.getHostname(),
-                        resource.getPort(), null, null, null);
-                scheduler = octopus.jobs().newScheduler(uri, credential, null);
-
+                scheduler = octopus.jobs().newScheduler(resource.getSchedulerType(), resource.getLocation(), credential, null);
             }
 
             JobDescription jobDescription = createJobDesciption(id, resource, queueName, nodeCount, timeMinutes, nodeLabel,
