@@ -57,8 +57,8 @@ public class Reservation {
         JavaJobDescription result = new JavaJobDescription();
 
         UUID uniqueID = UUID.randomUUID();
-        result.setStdout(uniqueID.toString() + "-reservation-" + id + ".out");
-        result.setStderr(uniqueID.toString() + "-reservation-" + id + ".err");
+        result.setStdout("reservation-" + id + "-" + uniqueID.toString() + ".out");
+        result.setStderr("reservation-" + id + "-" + uniqueID.toString() + ".err");
 
         result.setInteractive(false);
 
@@ -87,7 +87,7 @@ public class Reservation {
 
         javaArguments.add("--node-label");
         javaArguments.add(nodeLabel);
-        
+
         javaArguments.add("--resource-name");
         javaArguments.add(resource.getName());
 
@@ -203,7 +203,7 @@ public class Reservation {
     public int getResourceID() {
         return resourceID;
     }
-    
+
     public Job getJob() {
         return job;
     }
@@ -217,25 +217,25 @@ public class Reservation {
         }
     }
 
-//    public void waitUntilStarted() throws DistributedAmuseException {
-//        try {
-//            JobStatus status = octopus.jobs().waitUntilRunning(job, 0);
-//
-//            if (status.hasException()) {
-//                throw new DistributedAmuseException("error in reservation job: " + job, status.getException());
-//            }
-//        } catch (OctopusIOException | OctopusException e) {
-//            throw new DistributedAmuseException("failed to get job status " + job, e);
-//        }
-//    }
-//
-//    public String getStatus() throws DistributedAmuseException {
-//        try {
-//            return octopus.jobs().getJobStatus(job).getState();
-//        } catch (OctopusIOException | OctopusException e) {
-//            throw new DistributedAmuseException("failed to get job status " + job, e);
-//        }
-//    }
+    //    public void waitUntilStarted() throws DistributedAmuseException {
+    //        try {
+    //            JobStatus status = octopus.jobs().waitUntilRunning(job, 0);
+    //
+    //            if (status.hasException()) {
+    //                throw new DistributedAmuseException("error in reservation job: " + job, status.getException());
+    //            }
+    //        } catch (OctopusIOException | OctopusException e) {
+    //            throw new DistributedAmuseException("failed to get job status " + job, e);
+    //        }
+    //    }
+    //
+    //    public String getStatus() throws DistributedAmuseException {
+    //        try {
+    //            return octopus.jobs().getJobStatus(job).getState();
+    //        } catch (OctopusIOException | OctopusException e) {
+    //            throw new DistributedAmuseException("failed to get job status " + job, e);
+    //        }
+    //    }
 
     @Override
     public String toString() {
