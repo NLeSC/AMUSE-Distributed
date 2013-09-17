@@ -23,7 +23,11 @@ import ibis.ipl.SendPort;
 import ibis.ipl.WriteMessage;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import nl.esciencecenter.amuse.distributed.DistributedAmuse;
 import nl.esciencecenter.amuse.distributed.DistributedAmuseException;
@@ -42,7 +46,7 @@ import org.slf4j.LoggerFactory;
 public class Job extends Thread {
 
     public enum State {
-        PENDING, INITIALIZING, RUNNING, DONE, REPORTED;
+        PENDING, INITIALIZING, RUNNING, DONE, REPORTED, ERROR;
     }
 
     public enum Type {
@@ -108,12 +112,16 @@ public class Job extends Thread {
     public int getJobID() {
         return jobID;
     }
-    
+
     /**
      * @return True if this job is a batch job (script or pickled).
      */
     public boolean isBatchJob() {
         return type == Type.SCRIPT || type == Type.PICKLED;
+    }
+
+    public synchronized Type getJobType() {
+        return type;
     }
 
     private synchronized void setState(State newState) {
@@ -125,6 +133,10 @@ public class Job extends Thread {
         }
     }
 
+    public synchronized State getJobState() {
+        return state;
+    }
+
     public synchronized boolean isPending() {
         return state == State.PENDING;
     }
@@ -134,7 +146,7 @@ public class Job extends Thread {
     }
 
     public synchronized boolean isDone() {
-        return state == State.DONE || state == State.REPORTED;
+        return state == State.DONE || state == State.REPORTED || state == State.ERROR;
     }
 
     public synchronized boolean isReported() {
@@ -142,7 +154,7 @@ public class Job extends Thread {
     }
 
     public synchronized boolean hasError() {
-        return error != null;
+        return state == State.ERROR;
     }
 
     /**
@@ -194,6 +206,10 @@ public class Job extends Thread {
         }
 
         return result;
+    }
+
+    private synchronized Exception getError() {
+        return error;
     }
 
     /**
@@ -294,15 +310,15 @@ public class Job extends Thread {
             receivePort.close();
 
             if (!statusMessage.equals("ok")) {
-                setState(State.DONE);
+                setState(State.ERROR);
                 error = new DistributedAmuseException("Remote node reported error: " + statusMessage);
+            } else {
+                setState(State.RUNNING);
+                logger.debug("Job {} started on node {}", this, master);
             }
-
-            setState(State.RUNNING);
-            logger.debug("Job {} started on node {}", this, master);
         } catch (IOException e) {
             logger.error("Job failed!", e);
-            setState(State.DONE);
+            setState(State.ERROR);
             error = e;
         }
     }
@@ -345,12 +361,12 @@ public class Job extends Thread {
             receivePort.close();
 
             if (!statusMessage.equals("ok")) {
-                setState(State.DONE);
+                setState(State.ERROR);
                 error = new DistributedAmuseException("Remote node reported error: " + statusMessage);
+            } else {
+                setState(State.DONE);
+                logger.debug("Job {} canceled on node {}", this, master);
             }
-
-            setState(State.DONE);
-            logger.debug("Job {} canceled on node {}", this, master);
 
         } catch (IOException e) {
             throw new DistributedAmuseException("Failed to cancel job " + this, e);
@@ -359,27 +375,49 @@ public class Job extends Thread {
 
     void handleResult(ReadMessage message) throws IOException, ClassNotFoundException {
         logger.debug("Reading status message");
-        
-        String statusMessage = message.readString();
-        
-        if (!statusMessage.equals("ok")) {
-            logger.warn("Job ended in error: " + statusMessage);
-        }
 
+        String statusMessage = message.readString();
         this.error = (Exception) message.readObject();
 
         logger.debug("Got status message {} and error {}", statusMessage, this.error, this.error);
-        
-        //FIXME: read result files
 
-        setState(State.DONE);
-        logger.debug("Job {} done on node {}", this, message.origin());
+        if (!statusMessage.equals("ok")) {
+            logger.warn("Job ended in error: " + statusMessage);
+            setState(State.ERROR);
+        } else {
+            setState(State.DONE);
+            logger.debug("Job {} done on node {}", this, message.origin());
+
+        }
+
+        //FIXME: read result files
     }
 
     @Override
     public String toString() {
         return "Job [jobID=" + jobID + ", label=" + getLabel() + ", state=" + state + ", target=" + Arrays.toString(target)
                 + ", result=" + result + ", error=" + error + ", timeout=" + timeout + "]";
+    }
+
+    public Map<String, String> getStatusMap() {
+        Map<String, String> result = new LinkedHashMap<String, String>();
+
+        result.put("ID", Integer.toString(jobID));
+        result.put("Label", getLabel());
+        result.put("State", getJobState().toString());
+        result.put("Type", getJobType().toString());
+        result.put("Target", Arrays.toString(target));
+
+        Exception error = getError();
+
+        if (error != null) {
+            StringWriter writer = new StringWriter();
+            PrintWriter printWriter = new PrintWriter(writer);
+            error.printStackTrace(printWriter);
+            result.put("Error", writer.toString());
+        }
+
+        return result;
     }
 
 }

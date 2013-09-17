@@ -45,10 +45,10 @@ public class ResourceManager {
         //add local resource by default
 
         logger.debug("local amuse dir = " + amuseRootDir);
-        newResource("local", null, amuseRootDir, "local", false);
+        newResource("local", null, null, amuseRootDir, "local", false);
     }
 
-    public synchronized Resource newResource(String name, String location, String amuseDir,
+    public synchronized Resource newResource(String name, String location, String gateway, String amuseDir,
             String schedulerType, Boolean startHub) throws DistributedAmuseException {
         logger.debug("creating new resource: name = " + name + " location = " + location 
                 + " scheduler type = " + schedulerType + " amuse dir = " + amuseDir + " start hub = " + startHub);
@@ -59,7 +59,7 @@ public class ResourceManager {
             }
         }
 
-        Resource result = new Resource(name, location, amuseDir, schedulerType, startHub, octopus, iplServer);
+        Resource result = new Resource(name, location, gateway, amuseDir, schedulerType, startHub, octopus, iplServer);
 
         resources.add(result);
 

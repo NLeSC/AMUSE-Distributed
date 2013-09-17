@@ -19,10 +19,14 @@ import ibis.ipl.server.Server;
 
 import java.io.InputStream;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import nl.esciencecenter.amuse.distributed.AmuseConfiguration;
 import nl.esciencecenter.amuse.distributed.DistributedAmuseException;
 import nl.esciencecenter.octopus.Octopus;
+import nl.esciencecenter.octopus.adaptors.ssh.SshAdaptor;
 import nl.esciencecenter.octopus.credentials.Credential;
 import nl.esciencecenter.octopus.files.FileSystem;
 import nl.esciencecenter.octopus.files.Path;
@@ -48,6 +52,7 @@ public class Resource {
     private final int id;
     private final String name;
     private final String location;
+    private final String gateway;
     private final String amuseDir;
     private final String schedulerType;
 
@@ -57,7 +62,7 @@ public class Resource {
     private final Boolean startHub;
 
     private final Hub hub;
-    
+
     private static void waitUntilHubStarted(Server iplServer, String hubAddress, String name) throws DistributedAmuseException {
         for (int i = 0; i < 40; i++) {
             String[] knownHubAddresses = iplServer.getHubs();
@@ -77,16 +82,22 @@ public class Resource {
         throw new DistributedAmuseException("Local and new remote Hub at " + name + " not able to communicate");
     }
 
-    public Resource(String name, String location, String amuseDir, String schedulerType,
-            Boolean startHub, Octopus octopus, Server iplServer) throws DistributedAmuseException {
+    public Resource(String name, String location, String gateway, String amuseDir, String schedulerType, Boolean startHub,
+            Octopus octopus, Server iplServer) throws DistributedAmuseException {
         this.id = getNextID();
         this.name = name;
         this.location = location;
+        this.gateway = gateway;
         this.amuseDir = amuseDir;
         this.schedulerType = schedulerType;
         this.startHub = startHub;
 
         this.configuration = downloadConfiguration(octopus);
+
+        if (!configuration.isJavaEnabled()) {
+            throw new DistributedAmuseException("Resource " + name
+                    + " not suitable as target for distributed AMUSE, java not enabled in configuration");
+        }
 
         if (mustStartHub()) {
             this.hub = new Hub(this, this.configuration, iplServer.getHubs(), octopus);
@@ -107,11 +118,17 @@ public class Resource {
             FileSystem filesystem;
 
             if (this.name.equals("local")) {
-                filesystem = octopus.files().newFileSystem("local", "/",  null,  null);
+                filesystem = octopus.files().newFileSystem("local", "/", null, null);
             } else {
                 Credential credential = octopus.credentials().getDefaultCredential("ssh");
 
-                filesystem = octopus.files().newFileSystem("ssh", location, credential, null);
+                Map<String, String> properties = new HashMap<String, String>();
+                String gateway = getGateway();
+                if (gateway != null && !gateway.isEmpty()) {
+                    properties.put(SshAdaptor.GATEWAY, gateway);
+                }
+
+                filesystem = octopus.files().newFileSystem("ssh", location, credential, properties);
             }
 
             RelativePath amuseConfig = new RelativePath(this.amuseDir + "/config.mk");
@@ -136,6 +153,10 @@ public class Resource {
 
     public String getLocation() {
         return location;
+    }
+
+    public String getGateway() {
+        return gateway;
     }
 
     public String getAmuseDir() {
@@ -192,7 +213,27 @@ public class Resource {
 
     @Override
     public String toString() {
-        return "Resource [id=" + id + ", name=" + name + ", location=" + location + ", amuseDir=" + amuseDir + ", schedulerType=" + schedulerType + ", configuration=" + configuration
-                + ", startHub=" + startHub + ", hub=" + hub + "]";
+        return "Resource [id=" + id + ", name=" + name + ", location=" + location + ", amuseDir=" + amuseDir + ", schedulerType="
+                + schedulerType + ", configuration=" + configuration + ", startHub=" + startHub + ", hub=" + hub + "]";
     }
+
+    public Map<String, String> getStatusMap() throws DistributedAmuseException {
+        Map<String, String> result = new LinkedHashMap<String, String>();
+
+        result.put("ID", Integer.toString(id));
+        result.put("Name", name);
+        result.put("Location", location);
+        result.put("Gateway", gateway);
+        result.put("Amuse dir", amuseDir);
+        result.put("Scheduler type", schedulerType);
+
+        result.put("Java path", configuration.getJava());
+        result.put("Mpiexec enabled", Boolean.toString(configuration.isMpiexecEnabled()));
+        if (configuration.isMpiexecEnabled()) {
+            result.put("Mpiexec", configuration.getMpiexec());
+        }
+
+        return result;
+    }
+
 }

@@ -19,41 +19,50 @@ import org.junit.Test;
 
 /**
  * @author Niels Drost
- *
+ * 
  */
 public class DistributedAmuseIT {
 
     @Test
     public void test01_Constructor() throws DistributedAmuseException {
-        DistributedAmuse da = new DistributedAmuse("/home/niels/workspace/amuse/sandbox/ndrost/distributed", "/home/niels/workspace/amuse", 8678);
-        
+        DistributedAmuse da = new DistributedAmuse("/home/niels/workspace/amuse/sandbox/ndrost/distributed",
+                "/home/niels/workspace/amuse", 8678);
+
         da.reservationManager().newReservation("local", "unlimited", 1, 10, 1, "default");
         da.reservationManager().waitForAllReservations();
+        
+        
+        WorkerDescription description = new WorkerDescription("id", "some.code", "some.dir", "stdout", "stderr","default",
+                1,1,1,false);
+        
+        da.jobManager().submitWorkerJob(description);
+        
         try {
             Thread.sleep(300000);
         } catch (InterruptedException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
-        
+
         da.end();
     }
-    
+
     @Test
     public void test02_addResources() throws DistributedAmuseException {
-            DistributedAmuse da = new DistributedAmuse("/home/niels/workspace/amuse/sandbox/ndrost/distributed", "/home/niels/workspace/amuse", 8678);
-            
-        da.resourceManager().newResource("some.name", "niels@fs0.das4.cs.vu.nl", "/home/niels/amuse", "sge", true);
-        
+        DistributedAmuse da = new DistributedAmuse("/home/niels/workspace/amuse/sandbox/ndrost/distributed",
+                "/home/niels/workspace/amuse", 8678);
+
+        da.resourceManager().newResource("some.name", "niels@fs0.das4.cs.vu.nl", null, "/home/niels/amuse", "sge", true);
+        da.resourceManager().newResource("lgm", "niels@node04", "niels@fs.lgm.liacs.nl", "/home/niels/amuse", "sge", true);
+
         try {
             Thread.sleep(60000);
         } catch (InterruptedException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
-        
+
         da.end();
     }
 
-    
 }

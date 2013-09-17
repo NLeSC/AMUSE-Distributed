@@ -17,6 +17,7 @@ package nl.esciencecenter.amuse.distributed.web;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -24,6 +25,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import nl.esciencecenter.amuse.distributed.DistributedAmuse;
 import nl.esciencecenter.amuse.distributed.DistributedAmuseException;
+import nl.esciencecenter.amuse.distributed.jobs.Job;
 import nl.esciencecenter.amuse.distributed.reservations.Reservation;
 import nl.esciencecenter.amuse.distributed.resources.Resource;
 import nl.esciencecenter.octopus.jobs.JobStatus;
@@ -50,6 +52,16 @@ public class WebInterface extends AbstractHandler {
     private final Server server;
 
     private final DistributedAmuse distributedAmuse;
+
+    private static void writeMapAsTable(Map<String, String> map, PrintWriter writer) {
+        writer.println("<table cellspacing=\"10\">");
+
+        for (Map.Entry<String, String> entry : map.entrySet()) {
+            writer.println("<tr><td><pre>" + entry.getKey() + "</pre></td><td><pre>" + entry.getValue() + "</pre></td></tr>");
+        }
+
+        writer.println("</table>");
+    }
 
     public WebInterface(DistributedAmuse distributedAmuse, int port) throws Exception {
         this.distributedAmuse = distributedAmuse;
@@ -94,7 +106,9 @@ public class WebInterface extends AbstractHandler {
             }
             response.setStatus(HttpServletResponse.SC_OK);
         } catch (DistributedAmuseException e) {
+            response.getWriter().println("<pre>");
             e.printStackTrace(response.getWriter());
+            response.getWriter().println("</pre>");
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }
         baseRequest.setHandled(true);
@@ -159,8 +173,14 @@ public class WebInterface extends AbstractHandler {
     }
 
     private void writeJobTable(PrintWriter writer) {
-        writer.println("<h1>Overview</h1>");
-        writer.println("<p>handled job overview request</p>");
+        writer.println("<table border=\"1px\">");
+
+        writer.println("<tr><th>ID</th><th>Job State</th><th>Job Type</th><th>Job Label</th></tr>");
+        for (Job job : distributedAmuse.jobManager().getJobs()) {
+            writer.printf("<tr><td><a href=/jobs/%d>%d</a></td><td>%s</td><td>%s</td><td>%s</td></tr>\n", job.getJobID(),
+                    job.getJobID(), job.getJobState(), job.getJobType(), job.getLabel());
+        }
+        writer.println("</table>");
     }
 
     private void writeResourceDetailsResponse(PrintWriter writer, String resourceID) throws DistributedAmuseException {
@@ -169,22 +189,33 @@ public class WebInterface extends AbstractHandler {
         Resource resource = distributedAmuse.resourceManager().getResource(id);
 
         writer.println("<h1>Resource " + resourceID + "</h1>");
-        writer.println("<p>" + resource.getLocation() + "</p>");
+        writeMapAsTable(resource.getStatusMap(), writer);
     }
 
     private void writeReservationDetailsResponse(PrintWriter writer, String reservationID) throws DistributedAmuseException {
         int id = Integer.parseInt(reservationID);
-        
-        Reservation reservation = distributedAmuse.reservationManager().getReservation(id);
-        
-        writer.println("<h1>Reservation " + reservationID + "</h1>");
-        writer.println("<p>" + reservation.getNodeCount() + "</p>");
 
+        Reservation reservation = distributedAmuse.reservationManager().getReservation(id);
+
+        writer.println("<h1>Reservation " + reservationID + "</h1>");
+        
+        
+        Map<String, String> statusMap = reservation.getStatusMap();
+        
+        String resourceID = statusMap.get("Resource");
+        
+        //make resource value into a link
+        statusMap.put("Resource", "<a href=../resources/" + resourceID + ">" + resourceID + "</a>");
+        
+        writeMapAsTable(statusMap, writer);
     }
 
-    private void writeJobDetailsResponse(PrintWriter writer, String jobID) {
-        // TODO Auto-generated method stub
+    private void writeJobDetailsResponse(PrintWriter writer, String jobID) throws DistributedAmuseException {
+        int id = Integer.parseInt(jobID);
 
+        Job job = distributedAmuse.jobManager().getJob(id);
+        writer.println("<h1>Job " + jobID + "</h1>");
+        writeMapAsTable(job.getStatusMap(), writer);
     }
 
     /**

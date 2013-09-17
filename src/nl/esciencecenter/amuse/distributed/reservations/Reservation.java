@@ -16,7 +16,10 @@
 package nl.esciencecenter.amuse.distributed.reservations;
 
 import java.io.File;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import nl.esciencecenter.amuse.distributed.AmuseConfiguration;
@@ -24,6 +27,7 @@ import nl.esciencecenter.amuse.distributed.DistributedAmuseException;
 import nl.esciencecenter.amuse.distributed.pilot.Pilot;
 import nl.esciencecenter.amuse.distributed.resources.Resource;
 import nl.esciencecenter.octopus.Octopus;
+import nl.esciencecenter.octopus.adaptors.ssh.SshAdaptor;
 import nl.esciencecenter.octopus.credentials.Credential;
 import nl.esciencecenter.octopus.exceptions.OctopusException;
 import nl.esciencecenter.octopus.exceptions.OctopusIOException;
@@ -161,8 +165,14 @@ public class Reservation {
                 scheduler = octopus.jobs().newScheduler("local", null, null, null);
             } else {
                 Credential credential = octopus.credentials().getDefaultCredential(resource.getSchedulerType());
+                
+                Map<String,String> properties = new HashMap<String, String>();
+                String gateway = resource.getGateway();
+                if (gateway != null && !gateway.isEmpty()) {
+                    properties.put(SshAdaptor.GATEWAY, gateway);
+                }
 
-                scheduler = octopus.jobs().newScheduler(resource.getSchedulerType(), resource.getLocation(), credential, null);
+                scheduler = octopus.jobs().newScheduler(resource.getSchedulerType(), resource.getLocation(), credential, properties);
             }
 
             JobDescription jobDescription = createJobDesciption(id, resource, queueName, nodeCount, timeMinutes, slots, nodeLabel,
@@ -247,6 +257,20 @@ public class Reservation {
     @Override
     public String toString() {
         return "Reservation [id=" + id + "]";
+    }
+
+    public Map<String, String> getStatusMap() {
+        Map<String, String> result = new LinkedHashMap<String, String>();
+
+        result.put("ID", Integer.toString(id));
+        result.put("Queue", queueName);
+        result.put("Node Count", Integer.toString(nodeCount));
+        result.put("Time(minutes)", Integer.toString(timeMinutes));
+        result.put("Slots", Integer.toString(slots));
+        result.put("Node Label", nodeLabel);
+        result.put("Resource", Integer.toString(resourceID));
+        
+        return result;
     }
 
 }

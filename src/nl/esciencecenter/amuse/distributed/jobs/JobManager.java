@@ -65,9 +65,8 @@ public class JobManager extends Thread implements MessageUpcall {
             //properties.put("ibis.managementclient", "true");
             //properties.put("ibis.bytescount", "true");
 
-            ibis =
-                    IbisFactory.createIbis(DistributedAmuse.IPL_CAPABILITIES, properties, true, nodes,
-                            DistributedAmuse.ONE_TO_ONE_PORT_TYPE, DistributedAmuse.MANY_TO_ONE_PORT_TYPE);
+            ibis = IbisFactory.createIbis(DistributedAmuse.IPL_CAPABILITIES, properties, true, nodes,
+                    DistributedAmuse.ONE_TO_ONE_PORT_TYPE, DistributedAmuse.MANY_TO_ONE_PORT_TYPE);
 
             //label this ibis as the master node by running an election with us as the only 
             ibis.registry().elect("amuse");
@@ -104,11 +103,8 @@ public class JobManager extends Thread implements MessageUpcall {
     public PilotNodes getNodes() {
         return nodes;
     }
-    
-    /**
-     * @return
-     */
-    private synchronized Job[] getJobs() {
+
+    public synchronized Job[] getJobs() {
         return jobs.toArray(new Job[jobs.size()]);
     }
 
@@ -125,7 +121,6 @@ public class JobManager extends Thread implements MessageUpcall {
         // TODO Auto-generated method stub
         return 0;
     }
-
 
     public int submitPickledJob(String function, String arguments, String nodeLabel) throws DistributedAmuseException {
         // TODO Auto-generated method stub
@@ -150,16 +145,15 @@ public class JobManager extends Thread implements MessageUpcall {
             }
         }
     }
-    
 
-    private synchronized Job getJob(int jobID) {
+    public synchronized Job getJob(int jobID) throws DistributedAmuseException {
         for (Job job : jobs) {
             if (job.getJobID() == jobID) {
                 //will block until the job is finished, then send the result or throw an exception if the job failed, 
                 return job;
             }
         }
-        return null;
+        throw new DistributedAmuseException("Unknown job " + jobID);
     }
 
     public synchronized String getJobResult(int jobID) throws DistributedAmuseException {
@@ -182,8 +176,6 @@ public class JobManager extends Thread implements MessageUpcall {
         }
         throw new DistributedAmuseException("Unknown job " + jobID);
     }
-
-    
 
     public void end() {
         this.interrupt();
@@ -214,21 +206,19 @@ public class JobManager extends Thread implements MessageUpcall {
     @Override
     public void upcall(ReadMessage message) throws IOException, ClassNotFoundException {
         int jobID = message.readInt();
-        
+
         logger.debug("Got message for job {}", jobID);
-        
-        Job job = getJob(jobID);
-        
-        if (job == null) {
-            logger.error("Error handling result for unknown job" + jobID);
-            throw new IOException("Error handling result for unknown job" + jobID);
+
+        try {
+            Job job = getJob(jobID);
+            job.handleResult(message);
+        } catch (DistributedAmuseException e) {
+            throw new IOException("failed to obtain job: " + jobID, e);
         }
-        
-        job.handleResult(message);
     }
 
     /**
-     * Wake up the scheduler thread. 
+     * Wake up the scheduler thread.
      */
     public synchronized void nudge() {
         notifyAll();

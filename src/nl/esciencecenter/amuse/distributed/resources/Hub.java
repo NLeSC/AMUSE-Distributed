@@ -2,12 +2,14 @@ package nl.esciencecenter.amuse.distributed.resources;
 
 import ibis.ipl.server.ServerConnection;
 
-import java.net.URI;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import nl.esciencecenter.amuse.distributed.AmuseConfiguration;
 import nl.esciencecenter.amuse.distributed.DistributedAmuseException;
 import nl.esciencecenter.octopus.Octopus;
+import nl.esciencecenter.octopus.adaptors.ssh.SshAdaptor;
 import nl.esciencecenter.octopus.credentials.Credential;
 import nl.esciencecenter.octopus.engine.util.StreamForwarder;
 import nl.esciencecenter.octopus.jobs.Job;
@@ -86,8 +88,14 @@ public class Hub {
                 scheduler = octopus.jobs().newScheduler("local", null, null, null);
             } else {
                 Credential credential = octopus.credentials().getDefaultCredential("ssh");
+                
+                Map<String,String> properties = new HashMap<String, String>();
+                String gateway = resource.getGateway();
+                if (gateway != null && !gateway.isEmpty()) {
+                    properties.put(SshAdaptor.GATEWAY, gateway);
+                }
 
-                scheduler = octopus.jobs().newScheduler("ssh", resource.getLocation(), credential, null);
+                scheduler = octopus.jobs().newScheduler("ssh", resource.getLocation(), credential, properties);
 
                 logger.debug("starting hub using scheduler " + scheduler);
             }
