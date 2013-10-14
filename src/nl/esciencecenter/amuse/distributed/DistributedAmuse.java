@@ -143,6 +143,7 @@ public class DistributedAmuse {
         reservationManager.end();
         resourceManager.end();
         workerConnectionServer.end();
+        OctopusFactory.endAll();
         logger.debug("Distributed Amuse ended.");
     }
     

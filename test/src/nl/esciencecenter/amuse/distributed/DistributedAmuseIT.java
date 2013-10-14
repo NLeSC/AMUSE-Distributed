@@ -15,6 +15,8 @@
  */
 package nl.esciencecenter.amuse.distributed;
 
+import nl.esciencecenter.amuse.distributed.jobs.WorkerDescription;
+
 import org.junit.Test;
 
 /**
@@ -31,9 +33,8 @@ public class DistributedAmuseIT {
         da.reservationManager().newReservation("local", "unlimited", 1, 10, 1, "default");
         da.reservationManager().waitForAllReservations();
         
-        
-        WorkerDescription description = new WorkerDescription("id", "some.code", "some.dir", "stdout", "stderr","default",
-                1,1,1,false);
+        WorkerDescription description = new WorkerDescription("some.id", "some.dir/some.worker.executable", "stdout", "stderr","default",
+                1,1,1);
         
         da.jobManager().submitWorkerJob(description);
         

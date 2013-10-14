@@ -26,6 +26,7 @@ import javax.servlet.http.HttpServletResponse;
 import nl.esciencecenter.amuse.distributed.DistributedAmuse;
 import nl.esciencecenter.amuse.distributed.DistributedAmuseException;
 import nl.esciencecenter.amuse.distributed.jobs.Job;
+import nl.esciencecenter.amuse.distributed.jobs.WorkerJob;
 import nl.esciencecenter.amuse.distributed.reservations.Reservation;
 import nl.esciencecenter.amuse.distributed.resources.Resource;
 import nl.esciencecenter.octopus.jobs.JobStatus;
@@ -176,9 +177,9 @@ public class WebInterface extends AbstractHandler {
         writer.println("<table border=\"1px\">");
 
         writer.println("<tr><th>ID</th><th>Job State</th><th>Job Type</th><th>Job Label</th></tr>");
-        for (Job job : distributedAmuse.jobManager().getJobs()) {
+        for (WorkerJob job : distributedAmuse.jobManager().getWorkerJobs()) {
             writer.printf("<tr><td><a href=/jobs/%d>%d</a></td><td>%s</td><td>%s</td><td>%s</td></tr>\n", job.getJobID(),
-                    job.getJobID(), job.getJobState(), job.getJobType(), job.getLabel());
+                    job.getJobID(), job.getJobState(), "worker", job.getNodeLabel());
         }
         writer.println("</table>");
     }

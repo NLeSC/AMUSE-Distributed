@@ -24,22 +24,22 @@ import ibis.ipl.ReceivePort;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Properties;
 
 import nl.esciencecenter.amuse.distributed.DistributedAmuse;
 import nl.esciencecenter.amuse.distributed.DistributedAmuseException;
-import nl.esciencecenter.amuse.distributed.WorkerDescription;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * @author Niels Drost
- * 
  */
-public class JobManager extends Thread implements MessageUpcall {
+public class JobManager extends Thread {
 
     private static final Logger logger = LoggerFactory.getLogger(JobManager.class);
 
@@ -47,15 +47,20 @@ public class JobManager extends Thread implements MessageUpcall {
 
     private final Ibis ibis;
 
-    private final ReceivePort receivePort;
-
     private final PilotNodes nodes;
 
-    //all pending, running, completed, and failed jobs.
-    LinkedList<Job> jobs;
+    //all pending jobs.
+    private final LinkedList<Job> queue;
+
+    private final List<WorkerJob> workers;
+    private final List<ScriptJob> scriptJobs;
+    private final List<PickledJob> pickledJobs;
 
     public JobManager(String serverAddress, File tmpDir) throws DistributedAmuseException {
         nodes = new PilotNodes(this);
+        workers = new ArrayList<WorkerJob>();
+        scriptJobs = new ArrayList<ScriptJob>();
+        pickledJobs = new ArrayList<PickledJob>();
 
         try {
             Properties properties = new Properties();
@@ -73,15 +78,11 @@ public class JobManager extends Thread implements MessageUpcall {
 
             ibis.registry().enableEvents();
 
-            receivePort = ibis.createReceivePort(DistributedAmuse.MANY_TO_ONE_PORT_TYPE, PORT_NAME, this);
-            receivePort.enableConnections();
-            receivePort.enableMessageUpcalls();
-
         } catch (IOException | IbisCreationFailedException e) {
             throw new DistributedAmuseException("failed to create ibis", e);
         }
 
-        jobs = new LinkedList<Job>();
+        queue = new LinkedList<Job>();
 
         //start a thread to run the scheduling
         setName("Job Manager");
@@ -93,8 +94,10 @@ public class JobManager extends Thread implements MessageUpcall {
         return ibis;
     }
 
-    private synchronized void addJob(Job job) {
-        jobs.add(job);
+    private synchronized void addWorkerJob(WorkerJob job) {
+        queue.add(job);
+        
+        workers.add(job);
 
         //run scheduler thread now
         notifyAll();
@@ -103,41 +106,62 @@ public class JobManager extends Thread implements MessageUpcall {
     public PilotNodes getNodes() {
         return nodes;
     }
-
-    public synchronized Job[] getJobs() {
-        return jobs.toArray(new Job[jobs.size()]);
+    
+    public synchronized WorkerJob[] getWorkerJobs() {
+        return workers.toArray(new WorkerJob[0]);
+    }
+    
+    public synchronized ScriptJob[] getScriptJobs() {
+        return scriptJobs.toArray(new ScriptJob[0]);
+    }
+    
+    public synchronized PickledJob[] getPickledJobs() {
+        return pickledJobs.toArray(new PickledJob[0]);
     }
 
-    public Job submitWorkerJob(WorkerDescription workerDescription) throws DistributedAmuseException {
-        Job result = new Job(workerDescription, ibis);
+    public synchronized Job getJob(int jobID) throws DistributedAmuseException {
+        for(Job job: workers) {
+            if (jobID == job.getJobID()) {
+                return job;
+            }
+        }
+        
+        for(Job job: pickledJobs) {
+            if (jobID == job.getJobID()) {
+                return job;
+            }
+        }
+        
+        for(Job job: scriptJobs) {
+            if (jobID == job.getJobID()) {
+                return job;
+            }
+        }
 
-        addJob(result);
+        throw new DistributedAmuseException("Unknown job: " + jobID);
+    }
+
+    
+
+    public WorkerJob submitWorkerJob(WorkerDescription jobDescription) throws DistributedAmuseException {
+        WorkerJob result = new WorkerJob(jobDescription, ibis);
+
+        addWorkerJob(result);
 
         return result;
     }
 
-    public int submitScriptJob(String script, String arguments, String codeDir, String nodeLabel, boolean useCodeCache)
-            throws DistributedAmuseException {
-        // TODO Auto-generated method stub
-        return 0;
-    }
-
-    public int submitPickledJob(String function, String arguments, String nodeLabel) throws DistributedAmuseException {
-        // TODO Auto-generated method stub
-        return 0;
-    }
-
-    private synchronized boolean allBatchJobsDone() {
-        for (Job job : jobs) {
-            if (job.isBatchJob() && !job.isDone()) {
+    private synchronized boolean allScriptJobsDone() {
+        for (ScriptJob job : scriptJobs) {
+            if (!job.isDone()) {
                 return false;
             }
         }
         return true;
     }
 
-    public synchronized void waitForAllBatchJobs() throws DistributedAmuseException {
-        while (!allBatchJobsDone()) {
+    public synchronized void waitForScriptJobs() throws DistributedAmuseException {
+        while (!allScriptJobsDone()) {
             try {
                 wait();
             } catch (InterruptedException e) {
@@ -146,47 +170,32 @@ public class JobManager extends Thread implements MessageUpcall {
         }
     }
 
-    public synchronized Job getJob(int jobID) throws DistributedAmuseException {
-        for (Job job : jobs) {
-            if (job.getJobID() == jobID) {
-                //will block until the job is finished, then send the result or throw an exception if the job failed, 
-                return job;
-            }
-        }
-        throw new DistributedAmuseException("Unknown job " + jobID);
-    }
-
-    public synchronized String getJobResult(int jobID) throws DistributedAmuseException {
-        for (Job job : jobs) {
-            if (job.getJobID() == jobID) {
-                //will block until the job is finished, then send the result or throw an exception if the job failed, 
-                return job.getResult();
-            }
-        }
-        throw new DistributedAmuseException("Unknown job " + jobID);
-    }
-
-    //currently only called by worker connection
-    public synchronized void cancelJob(int jobID) throws DistributedAmuseException {
-        for (Job job : jobs) {
-            if (job.getJobID() == jobID) {
-                //blocks while sending a "cancel" message
-                job.cancel();
-            }
-        }
-        throw new DistributedAmuseException("Unknown job " + jobID);
-    }
-
     public void end() {
         this.interrupt();
 
-        for (Job job : getJobs()) {
+        for (Job job : getWorkerJobs()) {
             try {
                 job.cancel();
             } catch (DistributedAmuseException e) {
                 logger.error("Failed to cancel job: " + job, e);
             }
         }
+        for (Job job : getScriptJobs()) {
+            try {
+                job.cancel();
+            } catch (DistributedAmuseException e) {
+                logger.error("Failed to cancel job: " + job, e);
+            }
+        }
+        for (Job job : getPickledJobs()) {
+            try {
+                job.cancel();
+            } catch (DistributedAmuseException e) {
+                logger.error("Failed to cancel job: " + job, e);
+            }
+        }
+
+
         try {
             logger.debug("Terminating ibis pool");
             ibis.registry().terminate();
@@ -197,23 +206,6 @@ public class JobManager extends Thread implements MessageUpcall {
             ibis.end();
         } catch (IOException e) {
             logger.error("Failed to end ibis", e);
-        }
-    }
-
-    /**
-     * Handles incoming job messages from Pilots
-     */
-    @Override
-    public void upcall(ReadMessage message) throws IOException, ClassNotFoundException {
-        int jobID = message.readInt();
-
-        logger.debug("Got message for job {}", jobID);
-
-        try {
-            Job job = getJob(jobID);
-            job.handleResult(message);
-        } catch (DistributedAmuseException e) {
-            throw new IOException("failed to obtain job: " + jobID, e);
         }
     }
 
@@ -231,7 +223,7 @@ public class JobManager extends Thread implements MessageUpcall {
     public synchronized void run() {
         while (true) {
             //find nodes for jobs to run on
-            Iterator<Job> iterator = jobs.iterator();
+            Iterator<Job> iterator = queue.iterator();
             while (iterator.hasNext()) {
                 Job job = iterator.next();
 
@@ -242,11 +234,14 @@ public class JobManager extends Thread implements MessageUpcall {
                     //If suitable nodes are found
                     if (target != null) {
                         job.start(target);
+                        //remove this job from the queue
+                        iterator.remove();
                     }
-                } else if (job.isObsolete()) {
-                    //remove this job
+                } else {
+                    //remove this job from the queue
                     iterator.remove();
                 }
+
             }
 
             try {

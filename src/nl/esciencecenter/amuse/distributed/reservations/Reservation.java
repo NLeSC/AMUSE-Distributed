@@ -16,6 +16,7 @@
 package nl.esciencecenter.amuse.distributed.reservations;
 
 import java.io.File;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -135,6 +136,8 @@ public class Reservation {
     private final int resourceID;
 
     private final Job job;
+    
+    //private final FileSystem fileSystem;
 
     private final Octopus octopus;
 
@@ -223,6 +226,10 @@ public class Reservation {
 
     public Job getJob() {
         return job;
+    }
+    
+    public InputStream getStdoutStream() {
+        return null;
     }
 
     public void cancel() throws DistributedAmuseException {
