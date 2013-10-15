@@ -29,7 +29,6 @@ import nl.esciencecenter.amuse.distributed.jobs.Job;
 import nl.esciencecenter.amuse.distributed.jobs.WorkerJob;
 import nl.esciencecenter.amuse.distributed.reservations.Reservation;
 import nl.esciencecenter.amuse.distributed.resources.Resource;
-import nl.esciencecenter.octopus.jobs.JobStatus;
 
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
@@ -159,13 +158,7 @@ public class WebInterface extends AbstractHandler {
 
         writer.println("<tr><th>ID</th><th>Node Label</th><th>Resource Name</th><th>Node Count</th><th>Status</th></tr>");
         for (Reservation reservation : distributedAmuse.reservationManager().getReservations()) {
-            JobStatus jobStatus = distributedAmuse.reservationManager().getStatus(reservation);
-            String state;
-            if (jobStatus == null) {
-                state = "UNKNOWN";
-            } else {
-                state = jobStatus.getState();
-            }
+            String state = distributedAmuse.reservationManager().getState(reservation);
             writer.printf("<tr><td><a href=/reservations/%s>%s</a></td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n",
                     reservation.getID(), reservation.getID(), reservation.getNodeLabel(), reservation.getResourceName(),
                     reservation.getNodeCount(), state);
@@ -199,16 +192,46 @@ public class WebInterface extends AbstractHandler {
         Reservation reservation = distributedAmuse.reservationManager().getReservation(id);
 
         writer.println("<h1>Reservation " + reservationID + "</h1>");
-        
-        
+
         Map<String, String> statusMap = reservation.getStatusMap();
-        
+
         String resourceID = statusMap.get("Resource");
-        
+
         //make resource value into a link
         statusMap.put("Resource", "<a href=../resources/" + resourceID + ">" + resourceID + "</a>");
-        
+
         writeMapAsTable(statusMap, writer);
+
+        writer.println("<h3> Standard output</h3>");
+        writer.println("<p>");
+        try {
+            for (String line : reservation.getStdout()) {
+                writer.println(line + "<br>");
+            }
+        } catch (DistributedAmuseException e) {
+            writer.println("Failed to get standard output: " + e.getMessage());
+            writer.println("<pre>");
+            e.printStackTrace(writer);
+            writer.println("</pre>");
+
+        }
+        writer.println("</p>");
+
+        writer.println("<h3> Standard error</h3>");
+        writer.println("<p>");
+        try {
+            for (String line : reservation.getStderr()) {
+                writer.println(line + "<br>");
+            }
+        } catch (DistributedAmuseException e) {
+            writer.println("Failed to get standard error: " + e.getMessage());
+            writer.println("<pre>");
+            e.printStackTrace(writer);
+            writer.println("</pre>");
+        }
+
+        writer.println("</p>");
+
     }
 
     private void writeJobDetailsResponse(PrintWriter writer, String jobID) throws DistributedAmuseException {

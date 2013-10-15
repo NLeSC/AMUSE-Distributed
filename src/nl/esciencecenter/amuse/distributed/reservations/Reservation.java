@@ -16,7 +16,7 @@
 package nl.esciencecenter.amuse.distributed.reservations;
 
 import java.io.File;
-import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -27,15 +27,16 @@ import nl.esciencecenter.amuse.distributed.AmuseConfiguration;
 import nl.esciencecenter.amuse.distributed.DistributedAmuseException;
 import nl.esciencecenter.amuse.distributed.pilot.Pilot;
 import nl.esciencecenter.amuse.distributed.resources.Resource;
-import nl.esciencecenter.octopus.Octopus;
-import nl.esciencecenter.octopus.adaptors.ssh.SshAdaptor;
-import nl.esciencecenter.octopus.credentials.Credential;
-import nl.esciencecenter.octopus.exceptions.OctopusException;
-import nl.esciencecenter.octopus.exceptions.OctopusIOException;
-import nl.esciencecenter.octopus.jobs.Job;
-import nl.esciencecenter.octopus.jobs.JobDescription;
-import nl.esciencecenter.octopus.jobs.Scheduler;
-import nl.esciencecenter.octopus.util.JavaJobDescription;
+import nl.esciencecenter.xenon.Xenon;
+import nl.esciencecenter.xenon.XenonException;
+import nl.esciencecenter.xenon.adaptors.ssh.SshAdaptor;
+import nl.esciencecenter.xenon.credentials.Credential;
+import nl.esciencecenter.xenon.files.Path;
+import nl.esciencecenter.xenon.jobs.Job;
+import nl.esciencecenter.xenon.jobs.JobDescription;
+import nl.esciencecenter.xenon.jobs.Scheduler;
+import nl.esciencecenter.xenon.util.JavaJobDescription;
+import nl.esciencecenter.xenon.util.Utils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,14 +55,14 @@ public class Reservation {
         return nextID++;
     }
 
-    private static JavaJobDescription createJobDesciption(int id, Resource resource, String queueName, int nodeCount,
-            int timeMinutes, int slots, String nodeLabel, String serverAddress, String[] hubAddresses, File tmpDir)
+    private static JavaJobDescription createJobDesciption(int id, UUID uniqueID, Resource resource, String queueName, int nodeCount,
+            int timeMinutes, int slots, String nodeLabel, String serverAddress, String[] hubAddresses, Path stdoutPath, Path stderrPath)
             throws DistributedAmuseException {
         JavaJobDescription result = new JavaJobDescription();
 
-        UUID uniqueID = UUID.randomUUID();
-        result.setStdout("reservation-" + id + "-" + uniqueID.toString() + ".out");
-        result.setStderr("reservation-" + id + "-" + uniqueID.toString() + ".err");
+  
+        result.setStdout(stdoutPath.getRelativePath().getAbsolutePath());
+        result.setStderr(stderrPath.getRelativePath().getAbsolutePath());
 
         result.setInteractive(false);
 
@@ -99,7 +100,7 @@ public class Reservation {
 
         javaArguments.add("--amuse-home");
         javaArguments.add(configuration.getAmuseHome().getAbsolutePath());
-        
+
         javaArguments.add("--slots");
         javaArguments.add(Integer.toString(slots));
 
@@ -125,7 +126,11 @@ public class Reservation {
         return result;
     }
 
+    //ID in amuse
     private final int id;
+    
+    //unique ID for log files and such
+    private final UUID uniqueID;
 
     private final String queueName;
     private final int nodeCount;
@@ -136,10 +141,13 @@ public class Reservation {
     private final int resourceID;
 
     private final Job job;
-    
-    //private final FileSystem fileSystem;
 
-    private final Octopus octopus;
+    private final Resource resource;
+
+    private final Xenon xenon;
+    
+    private final Path stdoutPath;
+    private final Path stderrPath;
 
     /**
      * @param resource
@@ -149,8 +157,10 @@ public class Reservation {
      * @param nodeLabel
      */
     public Reservation(Resource resource, String queueName, int nodeCount, int timeMinutes, int slots, String nodeLabel,
-            String serverAddress, String[] hubAddresses, Octopus octopus, File tmpDir) throws DistributedAmuseException {
-        this.octopus = octopus;
+            String serverAddress, String[] hubAddresses, Xenon xenon, File tmpDir) throws DistributedAmuseException {
+        this.xenon = xenon;
+        this.resource = resource;
+
         this.queueName = queueName;
         this.nodeCount = nodeCount;
         this.timeMinutes = timeMinutes;
@@ -160,30 +170,43 @@ public class Reservation {
         this.resourceID = resource.getId();
 
         this.id = getNextID();
+        this.uniqueID = UUID.randomUUID();
 
         try {
             Scheduler scheduler;
+            Path resourceHome;
 
             if (resource.isLocal()) {
-                scheduler = octopus.jobs().newScheduler("local", null, null, null);
-            } else {
-                Credential credential = octopus.credentials().getDefaultCredential(resource.getSchedulerType());
+                scheduler = Utils.getLocalScheduler(xenon.jobs());
+                resourceHome = Utils.getLocalHome(xenon.files());
                 
-                Map<String,String> properties = new HashMap<String, String>();
+            } else {
+                Credential credential = xenon.credentials().getDefaultCredential(resource.getSchedulerType());
+
+                Map<String, String> properties = new HashMap<String, String>();
                 String gateway = resource.getGateway();
                 if (gateway != null && !gateway.isEmpty()) {
                     properties.put(SshAdaptor.GATEWAY, gateway);
                 }
 
-                scheduler = octopus.jobs().newScheduler(resource.getSchedulerType(), resource.getLocation(), credential, properties);
+                scheduler = xenon.jobs()
+                        .newScheduler(resource.getSchedulerType(), resource.getLocation(), credential, properties);
+                resourceHome = xenon.files().newFileSystem("ssh", resource.getLocation(), credential, properties).getEntryPath();
             }
 
-            JobDescription jobDescription = createJobDesciption(id, resource, queueName, nodeCount, timeMinutes, slots, nodeLabel,
-                    serverAddress, hubAddresses, tmpDir);
-
+            Path logDir = Utils.resolveWithRoot(xenon.files(), resourceHome, "distributed-amuse-logs", uniqueID.toString());
+            
+            xenon.files().createDirectories(logDir);
+            
+            stdoutPath = Utils.resolveWithRoot(xenon.files(), logDir, "stdout.txt");
+            stderrPath = Utils.resolveWithRoot(xenon.files(), logDir, "stderr.txt");
+                   
+            JobDescription jobDescription = createJobDesciption(id, uniqueID, resource, queueName, nodeCount, timeMinutes, slots,
+                    nodeLabel, serverAddress, hubAddresses, stdoutPath, stderrPath);
+            
             logger.debug("starting reservation using scheduler {}", scheduler);
 
-            this.job = octopus.jobs().submitJob(scheduler, jobDescription);
+            this.job = xenon.jobs().submitJob(scheduler, jobDescription);
 
             logger.debug("submitted reservation: {}", job);
 
@@ -207,7 +230,7 @@ public class Reservation {
     public int getTimeMinutes() {
         return timeMinutes;
     }
-    
+
     public int getSlots() {
         return slots;
     }
@@ -227,36 +250,47 @@ public class Reservation {
     public Job getJob() {
         return job;
     }
+
+    public List<String> getStdout() throws DistributedAmuseException {
+        try {
+            return Utils.readAllLines(xenon.files(), stdoutPath, StandardCharsets.UTF_8);
+        } catch (XenonException e) {
+            throw new DistributedAmuseException("failed to read stdout file " + stdoutPath + " for " + this, e);
+        }
+    }
     
-    public InputStream getStdoutStream() {
-        return null;
+    public List<String> getStderr() throws DistributedAmuseException {
+        try {
+            return Utils.readAllLines(xenon.files(), stderrPath, StandardCharsets.UTF_8);
+        } catch (XenonException e) {
+            throw new DistributedAmuseException("failed to read stderr file " + stderrPath + " for " + this, e);        }
     }
 
     public void cancel() throws DistributedAmuseException {
         logger.debug("cancelling reservation: {}", this);
         try {
-            octopus.jobs().cancelJob(job);
-        } catch (OctopusIOException | OctopusException e) {
+            xenon.jobs().cancelJob(job);
+        } catch (XenonException e) {
             throw new DistributedAmuseException("failed to cancel job " + job, e);
         }
     }
 
     //    public void waitUntilStarted() throws DistributedAmuseException {
     //        try {
-    //            JobStatus status = octopus.jobs().waitUntilRunning(job, 0);
+    //            JobStatus status = Xenon.jobs().waitUntilRunning(job, 0);
     //
     //            if (status.hasException()) {
     //                throw new DistributedAmuseException("error in reservation job: " + job, status.getException());
     //            }
-    //        } catch (OctopusIOException | OctopusException e) {
+    //        } catch (XenonIOException | XenonException e) {
     //            throw new DistributedAmuseException("failed to get job status " + job, e);
     //        }
     //    }
     //
     //    public String getStatus() throws DistributedAmuseException {
     //        try {
-    //            return octopus.jobs().getJobStatus(job).getState();
-    //        } catch (OctopusIOException | OctopusException e) {
+    //            return Xenon.jobs().getJobStatus(job).getState();
+    //        } catch (XenonIOException | XenonException e) {
     //            throw new DistributedAmuseException("failed to get job status " + job, e);
     //        }
     //    }
@@ -276,7 +310,7 @@ public class Reservation {
         result.put("Slots", Integer.toString(slots));
         result.put("Node Label", nodeLabel);
         result.put("Resource", Integer.toString(resourceID));
-        
+
         return result;
     }
 

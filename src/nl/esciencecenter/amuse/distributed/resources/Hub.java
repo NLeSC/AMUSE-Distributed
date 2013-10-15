@@ -8,15 +8,15 @@ import java.util.Map;
 
 import nl.esciencecenter.amuse.distributed.AmuseConfiguration;
 import nl.esciencecenter.amuse.distributed.DistributedAmuseException;
-import nl.esciencecenter.octopus.Octopus;
-import nl.esciencecenter.octopus.adaptors.ssh.SshAdaptor;
-import nl.esciencecenter.octopus.credentials.Credential;
-import nl.esciencecenter.octopus.engine.util.StreamForwarder;
-import nl.esciencecenter.octopus.jobs.Job;
-import nl.esciencecenter.octopus.jobs.JobDescription;
-import nl.esciencecenter.octopus.jobs.Scheduler;
-import nl.esciencecenter.octopus.jobs.Streams;
-import nl.esciencecenter.octopus.util.JavaJobDescription;
+import nl.esciencecenter.xenon.Xenon;
+import nl.esciencecenter.xenon.adaptors.ssh.SshAdaptor;
+import nl.esciencecenter.xenon.credentials.Credential;
+import nl.esciencecenter.xenon.engine.util.StreamForwarder;
+import nl.esciencecenter.xenon.jobs.Job;
+import nl.esciencecenter.xenon.jobs.JobDescription;
+import nl.esciencecenter.xenon.jobs.Scheduler;
+import nl.esciencecenter.xenon.jobs.Streams;
+import nl.esciencecenter.xenon.util.JavaJobDescription;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,7 +75,7 @@ public class Hub {
         return result;
     }
 
-    public Hub(Resource resource, AmuseConfiguration config, String[] hubs, Octopus octopus) throws DistributedAmuseException {
+    public Hub(Resource resource, AmuseConfiguration config, String[] hubs, Xenon xenon) throws DistributedAmuseException {
         try {
             JobDescription jobDescription = createJobDesciption(resource, hubs);
 
@@ -85,9 +85,9 @@ public class Hub {
             Scheduler scheduler;
 
             if (resource.isLocal()) {
-                scheduler = octopus.jobs().newScheduler("local", null, null, null);
+                scheduler = xenon.jobs().newScheduler("local", null, null, null);
             } else {
-                Credential credential = octopus.credentials().getDefaultCredential("ssh");
+                Credential credential = xenon.credentials().getDefaultCredential("ssh");
                 
                 Map<String,String> properties = new HashMap<String, String>();
                 String gateway = resource.getGateway();
@@ -95,16 +95,16 @@ public class Hub {
                     properties.put(SshAdaptor.GATEWAY, gateway);
                 }
 
-                scheduler = octopus.jobs().newScheduler("ssh", resource.getLocation(), credential, properties);
+                scheduler = xenon.jobs().newScheduler("ssh", resource.getLocation(), credential, properties);
 
                 logger.debug("starting hub using scheduler " + scheduler);
             }
 
-            job = octopus.jobs().submitJob(scheduler, jobDescription);
+            job = xenon.jobs().submitJob(scheduler, jobDescription);
 
             logger.debug("started job " + job);
 
-            Streams streams = octopus.jobs().getStreams(job);
+            Streams streams = xenon.jobs().getStreams(job);
 
             new StreamForwarder(streams.getStderr(), System.err);
 

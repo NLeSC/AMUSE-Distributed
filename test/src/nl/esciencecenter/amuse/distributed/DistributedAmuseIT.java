@@ -54,8 +54,12 @@ public class DistributedAmuseIT {
                 "/home/niels/workspace/amuse", 8678);
 
         da.resourceManager().newResource("some.name", "niels@fs0.das4.cs.vu.nl", null, "/home/niels/amuse", "sge", true);
-        da.resourceManager().newResource("lgm", "niels@node04", "niels@fs.lgm.liacs.nl", "/home/niels/amuse", "sge", true);
+        //da.resourceManager().newResource("lgm", "niels@node04", "niels@fs.lgm.liacs.nl", "/home/niels/amuse", "sge", true);
 
+        da.reservationManager().newReservation("some.name", "all.q", 1, 10, 1, "default");
+        
+        da.reservationManager().waitForAllReservations();
+        
         try {
             Thread.sleep(60000);
         } catch (InterruptedException e) {

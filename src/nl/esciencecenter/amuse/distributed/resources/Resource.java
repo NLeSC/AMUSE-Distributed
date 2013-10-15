@@ -25,12 +25,13 @@ import java.util.Map;
 
 import nl.esciencecenter.amuse.distributed.AmuseConfiguration;
 import nl.esciencecenter.amuse.distributed.DistributedAmuseException;
-import nl.esciencecenter.octopus.Octopus;
-import nl.esciencecenter.octopus.adaptors.ssh.SshAdaptor;
-import nl.esciencecenter.octopus.credentials.Credential;
-import nl.esciencecenter.octopus.files.FileSystem;
-import nl.esciencecenter.octopus.files.Path;
-import nl.esciencecenter.octopus.files.RelativePath;
+import nl.esciencecenter.xenon.Xenon;
+import nl.esciencecenter.xenon.XenonException;
+import nl.esciencecenter.xenon.adaptors.ssh.SshAdaptor;
+import nl.esciencecenter.xenon.credentials.Credential;
+import nl.esciencecenter.xenon.files.FileSystem;
+import nl.esciencecenter.xenon.files.Path;
+import nl.esciencecenter.xenon.files.RelativePath;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,7 +84,7 @@ public class Resource {
     }
 
     public Resource(String name, String location, String gateway, String amuseDir, String schedulerType, Boolean startHub,
-            Octopus octopus, Server iplServer) throws DistributedAmuseException {
+            Xenon xenon, Server iplServer) throws DistributedAmuseException {
         this.id = getNextID();
         this.name = name;
         this.location = location;
@@ -92,7 +93,7 @@ public class Resource {
         this.schedulerType = schedulerType;
         this.startHub = startHub;
 
-        this.configuration = downloadConfiguration(octopus);
+        this.configuration = downloadConfiguration(xenon);
 
         if (!configuration.isJavaEnabled()) {
             throw new DistributedAmuseException("Resource " + name
@@ -100,7 +101,7 @@ public class Resource {
         }
 
         if (mustStartHub()) {
-            this.hub = new Hub(this, this.configuration, iplServer.getHubs(), octopus);
+            this.hub = new Hub(this, this.configuration, iplServer.getHubs(), xenon);
             iplServer.addHubs(this.hub.getAddress());
 
             String hubAddress = this.hub.getAddress();
@@ -113,14 +114,15 @@ public class Resource {
         logger.debug("Created new resource {}", this);
     }
 
-    private AmuseConfiguration downloadConfiguration(Octopus octopus) throws DistributedAmuseException {
+    private FileSystem openFileSystem(Xenon xenon) throws DistributedAmuseException {
         try {
+
             FileSystem filesystem;
 
             if (this.name.equals("local")) {
-                filesystem = octopus.files().newFileSystem("local", "/", null, null);
+                filesystem = xenon.files().newFileSystem("local", "/", null, null);
             } else {
-                Credential credential = octopus.credentials().getDefaultCredential("ssh");
+                Credential credential = xenon.credentials().getDefaultCredential("ssh");
 
                 Map<String, String> properties = new HashMap<String, String>();
                 String gateway = getGateway();
@@ -128,18 +130,34 @@ public class Resource {
                     properties.put(SshAdaptor.GATEWAY, gateway);
                 }
 
-                filesystem = octopus.files().newFileSystem("ssh", location, credential, properties);
+                filesystem = xenon.files().newFileSystem("ssh", location, credential, properties);
             }
 
+            return filesystem;
+        } catch (XenonException e) {
+            throw new DistributedAmuseException("cannot open filesystem for resource " + this.name, e);
+        }
+    }
+
+    private AmuseConfiguration downloadConfiguration(Xenon xenon) throws DistributedAmuseException {
+        FileSystem filesystem = openFileSystem(xenon);
+
+        try {
             RelativePath amuseConfig = new RelativePath(this.amuseDir + "/config.mk");
 
-            Path path = octopus.files().newPath(filesystem, amuseConfig);
+            Path path = xenon.files().newPath(filesystem, amuseConfig);
 
-            try (InputStream in = octopus.files().newInputStream(path)) {
+            try (InputStream in = xenon.files().newInputStream(path)) {
                 return new AmuseConfiguration(this.amuseDir, in);
             }
         } catch (Exception e) {
             throw new DistributedAmuseException("cannot download configuration file for resource " + this.name, e);
+        } finally {
+            try {
+                xenon.files().close(filesystem);
+            } catch (XenonException e) {
+                //IGNORE
+            }
         }
     }
 
