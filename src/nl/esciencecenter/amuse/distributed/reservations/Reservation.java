@@ -137,8 +137,6 @@ public class Reservation {
     private final int timeMinutes;
     private final int slots;
     private final String nodeLabel;
-    private final String resourceName;
-    private final int resourceID;
 
     private final Job job;
 
@@ -166,8 +164,6 @@ public class Reservation {
         this.timeMinutes = timeMinutes;
         this.slots = slots;
         this.nodeLabel = nodeLabel;
-        this.resourceName = resource.getName();
-        this.resourceID = resource.getId();
 
         this.id = getNextID();
         this.uniqueID = UUID.randomUUID();
@@ -231,7 +227,7 @@ public class Reservation {
         return timeMinutes;
     }
 
-    public int getSlots() {
+    public int getSlotsPerNode() {
         return slots;
     }
 
@@ -240,11 +236,11 @@ public class Reservation {
     }
 
     public String getResourceName() {
-        return resourceName;
+        return resource.getName();
     }
 
     public int getResourceID() {
-        return resourceID;
+        return resource.getId();
     }
 
     public Job getJob() {
@@ -309,9 +305,11 @@ public class Reservation {
         result.put("Time(minutes)", Integer.toString(timeMinutes));
         result.put("Slots", Integer.toString(slots));
         result.put("Node Label", nodeLabel);
-        result.put("Resource", Integer.toString(resourceID));
+        result.put("Resource Name", getResourceName());
+        result.put("Resource ID", Integer.toString(getResourceID()));
 
         return result;
     }
+
 
 }

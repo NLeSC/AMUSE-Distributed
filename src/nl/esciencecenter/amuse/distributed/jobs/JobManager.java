@@ -18,9 +18,6 @@ package nl.esciencecenter.amuse.distributed.jobs;
 import ibis.ipl.Ibis;
 import ibis.ipl.IbisCreationFailedException;
 import ibis.ipl.IbisFactory;
-import ibis.ipl.MessageUpcall;
-import ibis.ipl.ReadMessage;
-import ibis.ipl.ReceivePort;
 
 import java.io.File;
 import java.io.IOException;
@@ -54,13 +51,13 @@ public class JobManager extends Thread {
 
     private final List<WorkerJob> workers;
     private final List<ScriptJob> scriptJobs;
-    private final List<PickledJob> pickledJobs;
+    private final List<FunctionJob> functionJobs;
 
     public JobManager(String serverAddress, File tmpDir) throws DistributedAmuseException {
         nodes = new PilotNodes(this);
         workers = new ArrayList<WorkerJob>();
         scriptJobs = new ArrayList<ScriptJob>();
-        pickledJobs = new ArrayList<PickledJob>();
+        functionJobs = new ArrayList<FunctionJob>();
 
         try {
             Properties properties = new Properties();
@@ -96,7 +93,7 @@ public class JobManager extends Thread {
 
     private synchronized void addWorkerJob(WorkerJob job) {
         queue.add(job);
-        
+
         workers.add(job);
 
         //run scheduler thread now
@@ -106,33 +103,62 @@ public class JobManager extends Thread {
     public PilotNodes getNodes() {
         return nodes;
     }
-    
+
     public synchronized WorkerJob[] getWorkerJobs() {
         return workers.toArray(new WorkerJob[0]);
     }
-    
+
     public synchronized ScriptJob[] getScriptJobs() {
         return scriptJobs.toArray(new ScriptJob[0]);
     }
-    
-    public synchronized PickledJob[] getPickledJobs() {
-        return pickledJobs.toArray(new PickledJob[0]);
+
+    public FunctionJob submitFunctionJob(String function, String arguments, String nodeLabel) throws DistributedAmuseException {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    public ScriptJob submitScriptJob(String scriptName, String arguments, String scriptDir, String nodeLabel,
+            boolean reUseCodeFiles) throws DistributedAmuseException {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    public synchronized FunctionJob[] getFunctionJobs() {
+        return functionJobs.toArray(new FunctionJob[0]);
+    }
+
+    public synchronized FunctionJob getFunctionJob(int jobID) throws DistributedAmuseException {
+        for (FunctionJob job : functionJobs) {
+            if (jobID == job.getJobID()) {
+                return job;
+            }
+        }
+        throw new DistributedAmuseException("Unknown job: " + jobID);
+    }
+
+    public synchronized ScriptJob getScriptJob(int jobID) throws DistributedAmuseException {
+        for (ScriptJob job : scriptJobs) {
+            if (jobID == job.getJobID()) {
+                return job;
+            }
+        }
+        throw new DistributedAmuseException("Unknown job: " + jobID);
     }
 
     public synchronized Job getJob(int jobID) throws DistributedAmuseException {
-        for(Job job: workers) {
+        for (Job job : workers) {
             if (jobID == job.getJobID()) {
                 return job;
             }
         }
-        
-        for(Job job: pickledJobs) {
+
+        for (Job job : functionJobs) {
             if (jobID == job.getJobID()) {
                 return job;
             }
         }
-        
-        for(Job job: scriptJobs) {
+
+        for (Job job : scriptJobs) {
             if (jobID == job.getJobID()) {
                 return job;
             }
@@ -141,14 +167,22 @@ public class JobManager extends Thread {
         throw new DistributedAmuseException("Unknown job: " + jobID);
     }
 
-    
-
     public WorkerJob submitWorkerJob(WorkerDescription jobDescription) throws DistributedAmuseException {
         WorkerJob result = new WorkerJob(jobDescription, ibis);
 
         addWorkerJob(result);
 
         return result;
+    }
+
+
+    public synchronized WorkerJob getWorkerJob(int jobID) throws DistributedAmuseException {
+        for (WorkerJob job : workers) {
+            if (jobID == job.getJobID()) {
+                return job;
+            }
+        }
+        throw new DistributedAmuseException("Unknown job: " + jobID);
     }
 
     private synchronized boolean allScriptJobsDone() {
@@ -187,14 +221,13 @@ public class JobManager extends Thread {
                 logger.error("Failed to cancel job: " + job, e);
             }
         }
-        for (Job job : getPickledJobs()) {
+        for (Job job : getFunctionJobs()) {
             try {
                 job.cancel();
             } catch (DistributedAmuseException e) {
                 logger.error("Failed to cancel job: " + job, e);
             }
         }
-
 
         try {
             logger.debug("Terminating ibis pool");
@@ -251,6 +284,36 @@ public class JobManager extends Thread {
                 return;
             }
         }
+    }
+
+    /**
+     * @param i
+     * @return
+     */
+    public void deleteFunctionJob(int jobID) throws DistributedAmuseException {
+    }
+
+    /**
+     * @param i
+     * @return
+     */
+    public void deleteScriptJob(int jobID) throws DistributedAmuseException {
+    }
+
+    /**
+     * @return
+     */
+    public int getWorkerJobCount() {
+        // TODO Auto-generated method stub
+        return 0;
+    }
+
+    /**
+     * @return
+     */
+    public int[] getWorkerIDs() {
+        // TODO Auto-generated method stub
+        return null;
     }
 
 }

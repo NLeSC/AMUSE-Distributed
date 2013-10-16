@@ -224,6 +224,10 @@ public class Resource {
     public Hub getHub() {
         return hub;
     }
+    
+    public boolean hasHub() {
+        return hub != null;
+    }
 
     public boolean isLocal() {
         return location == null || location.equals("localhost") || location.equals("local");

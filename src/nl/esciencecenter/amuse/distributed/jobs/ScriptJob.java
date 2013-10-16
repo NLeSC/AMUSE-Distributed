@@ -73,4 +73,36 @@ public class ScriptJob extends Job {
         
     }
 
+    /**
+     * @return
+     */
+    public boolean useCodeCache() {
+        // TODO Auto-generated method stub
+        return false;
+    }
+
+    /**
+     * @return
+     */
+    public String getScriptName() {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    /**
+     * @return
+     */
+    public String getArguments() {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    /**
+     * @return
+     */
+    public String getScriptDir() {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
 }

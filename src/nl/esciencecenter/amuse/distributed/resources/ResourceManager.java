@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Properties;
 
 import nl.esciencecenter.amuse.distributed.DistributedAmuseException;
+import nl.esciencecenter.amuse.distributed.reservations.Reservation;
 import nl.esciencecenter.xenon.Xenon;
 
 import org.slf4j.Logger;
@@ -117,4 +118,6 @@ public class ResourceManager {
         }
         iplServer.end(1000);
     }
+
+
 }

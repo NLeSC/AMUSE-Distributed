@@ -27,14 +27,13 @@ import nl.esciencecenter.amuse.distributed.DistributedAmuseException;
  * @author Niels Drost
  *
  */
-public class PickledJob extends Job {
+public class FunctionJob extends Job {
     
-    public PickledJob(String nodeLabel, int numberOfNodes, Ibis ibis) throws DistributedAmuseException  {
+    public FunctionJob(String nodeLabel, int numberOfNodes, Ibis ibis) throws DistributedAmuseException  {
         super(nodeLabel, numberOfNodes, ibis);
         // TODO Auto-generated constructor stub
     }
 
-    //only for pickled jobs
     private String result = null;
 
 
