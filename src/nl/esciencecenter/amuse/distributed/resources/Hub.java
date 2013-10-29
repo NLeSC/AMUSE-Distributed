@@ -47,9 +47,9 @@ public class Hub {
 
         //classpath
         List<String> classpath = result.getJavaClasspath();
-        classpath.add(configuration.getAmuseHome().getPath() + "/sandbox/ndrost/distributed/src/dist/*");
-        classpath.add(configuration.getAmuseHome().getPath() + "/sandbox/ndrost/distributed/worker.jar");
-        classpath.add(configuration.getAmuseHome().getPath() + "/sandbox/ndrost/distributed");
+        classpath.add(configuration.getAmuseHome().getPath() + "/src/amuse/community/distributed/src/dist/*");
+        classpath.add(configuration.getAmuseHome().getPath() + "/src/amuse/community/distributed/worker.jar");
+        classpath.add(configuration.getAmuseHome().getPath() + "/src/amuse/community/distributed");
 
         result.setJavaMain("ibis.ipl.server.Server");
 
