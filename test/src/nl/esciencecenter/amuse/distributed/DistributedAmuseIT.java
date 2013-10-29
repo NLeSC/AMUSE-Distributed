@@ -27,7 +27,7 @@ public class DistributedAmuseIT {
 
     @Test
     public void test01_Constructor() throws DistributedAmuseException {
-        DistributedAmuse da = new DistributedAmuse("/home/niels/workspace/amuse/sandbox/ndrost/distributed",
+        DistributedAmuse da = new DistributedAmuse("/home/niels/workspace/amuse/src/amuse/community/distributed",
                 "/home/niels/workspace/amuse", 8678);
 
         da.reservationManager().newReservation("local", "unlimited", 1, 10, 1, "default", "");
@@ -50,7 +50,7 @@ public class DistributedAmuseIT {
 
     @Test
     public void test02_addResources() throws DistributedAmuseException {
-        DistributedAmuse da = new DistributedAmuse("/home/niels/workspace/amuse/sandbox/ndrost/distributed",
+        DistributedAmuse da = new DistributedAmuse("/home/niels/workspace/amuse/src/amuse/community/distributed",
                 "/home/niels/workspace/amuse", 8678);
 
         da.resourceManager().newResource("some.name", "niels@fs0.das4.cs.vu.nl", null, "/home/niels/amuse", "sge", true);
