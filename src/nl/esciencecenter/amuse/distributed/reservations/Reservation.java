@@ -222,7 +222,9 @@ public class Reservation {
             
             Path logDir = Utils.resolveWithRoot(xenon.files(), resourceHome, "distributed-amuse-logs");
 
-            xenon.files().createDirectories(logDir);
+            if (!xenon.files().exists(logDir)) { 
+                xenon.files().createDirectories(logDir);
+            }
 
             stdoutPath = Utils.resolveWithRoot(xenon.files(), logDir, "reservation-" + uniqueID + "-stdout.txt");
             stderrPath = Utils.resolveWithRoot(xenon.files(), logDir, "reservation-" + uniqueID + "-stderr.txt");
