@@ -101,9 +101,7 @@ public class Pilot implements MessageUpcall, ReceivePortConnectUpcall {
         
         logger.info("using shell for boot command: " + shell);
         
-        for (String commandElement: command.split(WHITESPACE_REGEX)) {
-            builder.command().add(commandElement);
-        }
+        builder.command().add("exec " + command);
         
         builder.redirectError(Redirect.INHERIT);
         builder.redirectOutput(Redirect.INHERIT);
