@@ -96,6 +96,8 @@ public class Pilot implements MessageUpcall, ReceivePortConnectUpcall {
             shell = "/bin/bash";
         }
         builder.command().add(shell);
+        //execute the command, if it is a shell script or not...
+        builder.command().add("-c");
         
         logger.info("using shell for boot command: " + shell);
         

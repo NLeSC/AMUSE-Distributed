@@ -177,6 +177,8 @@ public class WorkerProxy extends Thread {
             shell = "/bin/bash";
         }
         builder.command().add(shell);
+        //execute the command, if it is a shell script or not...
+        builder.command().add("-c");
         
         logger.info("using shell: " + shell);
 
