@@ -56,7 +56,7 @@ public class WorkerProxy extends Thread {
     private static final int ACCEPT_TIMEOUT = 100; // ms
     private static final int ACCEPT_TRIES = 50;
 
-    private static final String[] ENVIRONMENT_BLACKLIST = { "JOB_ID", "PE_", "PRUN_", "JOB_NAME", "JOB_SCRIPT", "OMPI_", "SLURM", "SBATCH", "SRUN"};
+    static final String[] ENVIRONMENT_BLACKLIST = { "JOB_ID", "PE_", "PRUN_", "JOB_NAME", "JOB_SCRIPT", "OMPI_", "SLURM", "SBATCH", "SRUN"};
 
     // local socket communication stuff
 
@@ -171,19 +171,14 @@ public class WorkerProxy extends Thread {
             builder.environment().put("OMP_NUM_THREADS", Integer.toString(description.getNrOfThreads()));
         }
         
-        //use the shell to run commands
-        String shell = System.getenv("SHELL");
-        if (shell == null) {
-            shell = "/bin/bash";
-        }
-        builder.command().add(shell);
+        //use a bash shell to run commands
+        builder.command().add("/bin/bash");
+        builder.command().add("--login");
         //execute the command, if it is a shell script or not...
         builder.command().add("-c");
         
         String command = "exec ";
         
-        logger.info("using shell: " + shell);
-
         if (!amuseConfiguration.isMpiexecEnabled()) {
             logger.info("not using mpiexec (as it is disabled)");
             if (description.getNrOfWorkers() > 1) {
