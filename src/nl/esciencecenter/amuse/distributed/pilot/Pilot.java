@@ -89,7 +89,7 @@ public class Pilot implements MessageUpcall, ReceivePortConnectUpcall {
     }
     
     private static void runBootCommand(String command) throws IOException, InterruptedException {
-        ProcessBuilder builder = new ProcessBuilder();
+        ProcessBuilder builder = new ProcessBuilder(command.split(WHITESPACE_REGEX));
         
         for (String key : builder.environment().keySet().toArray(new String[0])) {
             for (String blacklistedKey : WorkerProxy.ENVIRONMENT_BLACKLIST) {
@@ -99,13 +99,6 @@ public class Pilot implements MessageUpcall, ReceivePortConnectUpcall {
                 }
             }
         }
-        
-        builder.command().add("/bin/bash");
-        builder.command().add("--login");
-        //execute the command, if it is a shell script or not...
-        builder.command().add("-c");
-        
-        builder.command().add("exec " + command);
         
         builder.redirectError(Redirect.INHERIT);
         builder.redirectOutput(Redirect.INHERIT);
