@@ -27,10 +27,10 @@ import javax.servlet.http.HttpServletResponse;
 
 import nl.esciencecenter.amuse.distributed.DistributedAmuse;
 import nl.esciencecenter.amuse.distributed.DistributedAmuseException;
-import nl.esciencecenter.amuse.distributed.jobs.Job;
+import nl.esciencecenter.amuse.distributed.jobs.AmuseJob;
 import nl.esciencecenter.amuse.distributed.jobs.WorkerJob;
-import nl.esciencecenter.amuse.distributed.reservations.Reservation;
-import nl.esciencecenter.amuse.distributed.resources.Resource;
+import nl.esciencecenter.amuse.distributed.reservations.PilotManager;
+import nl.esciencecenter.amuse.distributed.resources.ResourceManager;
 
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
@@ -172,7 +172,7 @@ public class WebInterface extends AbstractHandler {
         writer.println("<table border=\"1px\">");
 
         writer.println("<tr><th>ID</th><th>Name</th><th>Hostname</th><th>Type</th></tr>");
-        for (Resource resource : distributedAmuse.resourceManager().getResources()) {
+        for (ResourceManager resource : distributedAmuse.resourceManager().getResources()) {
             writer.printf("<tr><td><a href=/resources/%s>%s</a></td><td>%s</td><td>%s</td><td>%s</td></tr>\n", resource.getId(),
                     resource.getId(), resource.getName(), resource.getLocation(), resource.getSchedulerType());
         }
@@ -183,10 +183,10 @@ public class WebInterface extends AbstractHandler {
         writer.println("<table border=\"1px\">");
 
         writer.println("<tr><th>ID</th><th>Node Label</th><th>Resource Name</th><th>Node Count</th><th>Status</th></tr>");
-        for (Reservation reservation : distributedAmuse.reservationManager().getReservations()) {
-            String state = distributedAmuse.reservationManager().getState(reservation);
+        for (PilotManager reservation : distributedAmuse.reservationManager().getPilots()) {
+            String state = reservation.getStateString();
             writer.printf("<tr><td><a href=/reservations/%s>%s</a></td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n",
-                    reservation.getID(), reservation.getID(), reservation.getNodeLabel(), reservation.getResourceName(),
+                    reservation.getAmuseID(), reservation.getAmuseID(), reservation.getNodeLabel(), reservation.getResourceName(),
                     reservation.getNodeCount(), state);
         }
         writer.println("</table>");
@@ -198,7 +198,7 @@ public class WebInterface extends AbstractHandler {
         writer.println("<tr><th>ID</th><th>Job State</th><th>Job Type</th><th>Job Label</th></tr>");
         for (WorkerJob job : distributedAmuse.jobManager().getWorkerJobs()) {
             writer.printf("<tr><td><a href=/jobs/%d>%d</a></td><td>%s</td><td>%s</td><td>%s</td></tr>\n", job.getJobID(),
-                    job.getJobID(), job.getJobState(), "worker", job.getNodeLabel());
+                    job.getJobID(), job.getJobState(), "worker", job.getLabel());
         }
         writer.println("</table>");
     }
@@ -206,7 +206,7 @@ public class WebInterface extends AbstractHandler {
     private void writeResourceDetailsResponse(PrintWriter writer, String resourceID) throws DistributedAmuseException {
         int id = Integer.parseInt(resourceID);
 
-        Resource resource = distributedAmuse.resourceManager().getResource(id);
+        ResourceManager resource = distributedAmuse.resourceManager().getResource(id);
 
         writer.println("<h1>Resource " + resourceID + "</h1>");
         writeMapAsTable(resource.getStatusMap(), writer);
@@ -215,7 +215,7 @@ public class WebInterface extends AbstractHandler {
     private void writeReservationDetailsResponse(PrintWriter writer, String reservationID) throws DistributedAmuseException {
         int id = Integer.parseInt(reservationID);
 
-        Reservation reservation = distributedAmuse.reservationManager().getReservation(id);
+        PilotManager reservation = distributedAmuse.reservationManager().getPilot(id);
 
         writer.println("<h1>Reservation " + reservationID + "</h1>");
 
@@ -263,7 +263,7 @@ public class WebInterface extends AbstractHandler {
     private void writeJobDetailsResponse(PrintWriter writer, String jobID) throws DistributedAmuseException {
         int id = Integer.parseInt(jobID);
 
-        Job job = distributedAmuse.jobManager().getJob(id);
+        AmuseJob job = distributedAmuse.jobManager().getJob(id);
         writer.println("<h1>Job " + jobID + "</h1>");
         writeMapAsTable(job.getStatusMap(), writer);
     }

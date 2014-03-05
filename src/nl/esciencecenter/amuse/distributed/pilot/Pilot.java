@@ -128,22 +128,22 @@ public class Pilot implements MessageUpcall, ReceivePortConnectUpcall {
         
     }
 
-    Pilot(AmuseConfiguration configuration, Properties properties, String reservationID, String nodeLabel, int slots, String bootCommand, boolean debug)
+    Pilot(AmuseConfiguration configuration, Properties properties, UUID id, String bootCommand, boolean debug)
             throws IbisCreationFailedException, IOException, InterruptedException {
         this.configuration = configuration;
+        this.id = id;
         jobs = new HashMap<Integer, JobRunner>();
 
         initializeLogger(debug);
         
-        //reservation ID, label, slots, hostname
-        String tag = reservationID + "," + nodeLabel + "," + slots + "," + InetAddress.getLocalHost().getHostAddress();
+        //ID of this pilot
+        String tag = id.toString();
 
         ibis = IbisFactory.createIbis(DistributedAmuse.IPL_CAPABILITIES, properties, true, null, null, tag,
                 DistributedAmuse.ONE_TO_ONE_PORT_TYPE, DistributedAmuse.MANY_TO_ONE_PORT_TYPE);
 
         receivePort = ibis.createReceivePort(DistributedAmuse.MANY_TO_ONE_PORT_TYPE, PORT_NAME, this, this, null);
         
-        this.id = UUID.randomUUID();
         tmpDir = createTmpDir(id);
         
         if (bootCommand != null) {
@@ -174,8 +174,7 @@ public class Pilot implements MessageUpcall, ReceivePortConnectUpcall {
 
     public static void main(String[] arguments) throws Exception {
         File amuseHome = null;
-        String nodeLabel = "default";
-        String reservationID = null;
+        UUID pilotID = null;
         int slots = 1;
         String bootCommand = null;
         boolean debug = false;
@@ -187,12 +186,9 @@ public class Pilot implements MessageUpcall, ReceivePortConnectUpcall {
         //properties.put("ibis.bytescount", "true");
 
         for (int i = 0; i < arguments.length; i++) {
-            if (arguments[i].equalsIgnoreCase("--reservation-id")) {
+            if (arguments[i].equalsIgnoreCase("--pilot-id")) {
                 i++;
-                reservationID = arguments[i];
-            } else if (arguments[i].equalsIgnoreCase("--node-label")) {
-                i++;
-                nodeLabel = arguments[i];
+                pilotID = UUID.fromString(arguments[i]);
             } else if (arguments[i].equalsIgnoreCase("--resource-name")) {
                 i++;
                 properties.put(IbisProperties.LOCATION, arguments[i]);
@@ -226,7 +222,7 @@ public class Pilot implements MessageUpcall, ReceivePortConnectUpcall {
             System.err.println(entry.getKey() + " = " + entry.getValue());
         }
         
-        Pilot pilot = new Pilot(configuration, properties, reservationID, nodeLabel, slots, bootCommand, debug);
+        Pilot pilot = new Pilot(configuration, properties, pilotID, bootCommand, debug);
 
         pilot.run();
 

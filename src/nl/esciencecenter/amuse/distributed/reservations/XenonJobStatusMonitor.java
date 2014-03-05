@@ -27,11 +27,11 @@ import nl.esciencecenter.xenon.jobs.JobStatus;
 /**
  * @author Niels Drost
  * 
- *         Utility class to track the status of one or more jobs. Will periodically poll the status of jobs, and allow retrieval
- *         of the last-known status of jobs. Will also keep track of the last status of a job when it finishes.
+ *         Utility class to track the status of one or more jobs. Will periodically poll the status of all pilot xenon jobs, 
+ *         and set this status in the pilot manager.
  * 
  */
-public class JobStatusMonitor extends Thread {
+public class XenonJobStatusMonitor extends Thread {
 
     private final int JOB_UPDATE_DELAY = 5000;
 
@@ -39,7 +39,7 @@ public class JobStatusMonitor extends Thread {
 
     private final Xenon xenon;
 
-    JobStatusMonitor(Xenon xenon) {
+    XenonJobStatusMonitor(Xenon xenon) {
         this.xenon = xenon;
         statusMap = new HashMap<Job, JobStatus>();
 

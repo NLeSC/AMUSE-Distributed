@@ -30,11 +30,11 @@ public class DistributedAmuseIT {
         DistributedAmuse da = new DistributedAmuse("/home/niels/workspace/amuse/src/amuse/community/distributed",
                 "/home/niels/workspace/amuse", 8678, true);
 
-        da.reservationManager().newReservation("local", "unlimited", 1, 10, 1, "default", "");
-        da.reservationManager().waitForAllReservations();
+        da.reservationManager().newPilot("local", "unlimited", 1, 10, 1, "default", "");
+        da.reservationManager().waitForAllPilots();
         
         WorkerDescription description = new WorkerDescription("some.id", "some.dir/some.worker.executable", "stdout", "stderr","default",
-                1,1,1, 60);
+                1,1, 60);
         
         da.jobManager().submitWorkerJob(description);
         
@@ -56,9 +56,9 @@ public class DistributedAmuseIT {
         da.resourceManager().newResource("some.name", "niels@fs0.das4.cs.vu.nl", null, "/home/niels/amuse", "sge", true, "");
         //da.resourceManager().newResource("lgm", "niels@node04", "niels@fs.lgm.liacs.nl", "/home/niels/amuse", "sge", true);
 
-        da.reservationManager().newReservation("some.name", "all.q", 1, 10, 1, "default", "");
+        da.reservationManager().newPilot("some.name", "all.q", 1, 10, 1, "default", "");
         
-        da.reservationManager().waitForAllReservations();
+        da.reservationManager().waitForAllPilots();
         
         try {
             Thread.sleep(60000);
