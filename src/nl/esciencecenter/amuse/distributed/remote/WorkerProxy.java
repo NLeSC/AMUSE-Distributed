@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nl.esciencecenter.amuse.distributed.pilot;
+package nl.esciencecenter.amuse.distributed.remote;
 
 import ibis.ipl.Ibis;
 import ibis.ipl.IbisIdentifier;
@@ -273,7 +273,7 @@ public class WorkerProxy extends Thread {
     /**
      * Starts a worker proxy. Make take a while.
      */
-    public WorkerProxy(WorkerDescription description, AmuseConfiguration amuseConfiguration, IbisIdentifier[] nodes, Ibis ibis,
+    public WorkerProxy(WorkerDescription description, AmuseConfiguration amuseConfiguration, Ibis ibis,
             File tempDirectory, int jobID) throws Exception {
         this.description = description;
         this.amuseConfiguration = amuseConfiguration;

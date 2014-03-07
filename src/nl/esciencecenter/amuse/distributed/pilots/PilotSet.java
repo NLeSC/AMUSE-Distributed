@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nl.esciencecenter.amuse.distributed.reservations;
+package nl.esciencecenter.amuse.distributed.pilots;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -58,7 +58,7 @@ public class PilotSet {
         this.tmpDir = tmpDir;
         this.debug = debug;
         pilots = new ArrayList<PilotManager>();
-        jobStatusMonitor = new XenonJobStatusMonitor(xenon);
+        jobStatusMonitor = new XenonJobStatusMonitor(this, xenon);
         this.statusMonitor = new PilotStatusMonitor(this);
     }
 
@@ -73,7 +73,9 @@ public class PilotSet {
                 resourceManager.getIplServerAddress(), resourceManager.getHubAddresses(), xenon, tmpDir, debug);
 
         pilots.add(result);
-        jobStatusMonitor.addJob(result.getXenonJob());
+        
+        //trigger an update in the job statuses
+        jobStatusMonitor.nudge();
 
         return result;
     }
@@ -87,19 +89,18 @@ public class PilotSet {
         throw new DistributedAmuseException("Reservation with ID " + reservationID + " not found");
     }
 
-    public synchronized void deletePilot(int reservationID) throws DistributedAmuseException {
-        logger.debug("deleting reservation " + reservationID);
+    public synchronized void deletePilot(int pilotID) throws DistributedAmuseException {
+        logger.debug("deleting reservation " + pilotID);
 
         for (int i = 0; i < pilots.size(); i++) {
-            PilotManager reservation = pilots.get(i);
-            if (reservationID == reservation.getAmuseID()) {
+            PilotManager pilot = pilots.get(i);
+            if (pilotID == pilot.getAmuseID()) {
                 pilots.remove(i);
-                jobStatusMonitor.removeJob(reservation.getXenonJob());
-                reservation.stop();
+                pilot.stop();
                 return;
             }
         }
-        throw new DistributedAmuseException("Reservation " + reservationID + " not found");
+        throw new DistributedAmuseException("Pilot " + pilotID + " not found");
     }
 
     private synchronized int[] getPilotIDs() {
@@ -132,33 +133,35 @@ public class PilotSet {
         }
         return result;
     }
+    
+    public synchronized void nudge() {
+        notifyAll();
+    }
 
     public void waitForAllPilots() throws DistributedAmuseException {
         logger.debug("waiting for all reservations to start");
 
-        //        long deadline = Long.MAX_VALUE;
         long timeout = 100; //ms
 
-        int[] reservations = getPilotIDs();
+        int[] pilots = getPilotIDs();
         while (!allPilotsRunning()) {
-
-            //            if (System.currentTimeMillis() > deadline) {
-            //                throw new DistributedAmuseException("Pilot nodes failed to start");
-            //            }
 
             try {
                 logger.debug("Now waiting {} ms", timeout);
-                Thread.sleep(timeout);
+                
+                synchronized(this) {
+                    wait(timeout);
+                }
                 //back-off waiting time to max 10 seconds
                 if (timeout < 10000) {
-                    timeout = timeout * 2;
+                    timeout = timeout + 100;
                 }
             } catch (InterruptedException e) {
                 return;
             }
         }
 
-        logger.debug("All reservations started, all {} pilots accounted for.", reservations.length);
+        logger.debug("All {} pilots started.", pilots.length);
     }
 
     public synchronized void end() {

@@ -29,8 +29,8 @@ import java.util.Properties;
 
 import nl.esciencecenter.amuse.distributed.DistributedAmuse;
 import nl.esciencecenter.amuse.distributed.DistributedAmuseException;
-import nl.esciencecenter.amuse.distributed.reservations.PilotManager;
-import nl.esciencecenter.amuse.distributed.reservations.PilotSet;
+import nl.esciencecenter.amuse.distributed.pilots.PilotManager;
+import nl.esciencecenter.amuse.distributed.pilots.PilotSet;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -288,9 +288,7 @@ public class JobSet extends Thread {
         } catch (IOException e) {
             logger.error("Failed to terminate ibis pool", e);
         }
-    }
-    
-    public void endIbis() {
+        
         try {
             ibis.end();
         } catch (IOException e) {

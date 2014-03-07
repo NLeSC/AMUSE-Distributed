@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nl.esciencecenter.amuse.distributed.reservations;
+package nl.esciencecenter.amuse.distributed.pilots;
 
 import ibis.ipl.IbisIdentifier;
 import ibis.ipl.RegistryEventHandler;
@@ -60,6 +60,9 @@ public class PilotStatusMonitor implements RegistryEventHandler {
          if (pilot != null) {
              pilot.setIbisIdentifier(ibis);
          }
+         
+         //wake up PilotSet to re-check if all pilots are now running
+         pilots.nudge();
     }
 
     @Override

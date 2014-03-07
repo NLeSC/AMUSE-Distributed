@@ -30,8 +30,8 @@ import java.util.Map;
 
 import nl.esciencecenter.amuse.distributed.DistributedAmuse;
 import nl.esciencecenter.amuse.distributed.DistributedAmuseException;
-import nl.esciencecenter.amuse.distributed.pilot.Pilot;
-import nl.esciencecenter.amuse.distributed.reservations.PilotManager;
+import nl.esciencecenter.amuse.distributed.pilots.PilotManager;
+import nl.esciencecenter.amuse.distributed.remote.Pilot;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

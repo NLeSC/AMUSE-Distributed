@@ -22,7 +22,7 @@ import java.io.File;
 import java.util.UUID;
 
 import nl.esciencecenter.amuse.distributed.jobs.JobSet;
-import nl.esciencecenter.amuse.distributed.reservations.PilotSet;
+import nl.esciencecenter.amuse.distributed.pilots.PilotSet;
 import nl.esciencecenter.amuse.distributed.resources.ResourceSet;
 import nl.esciencecenter.amuse.distributed.web.WebInterface;
 import nl.esciencecenter.amuse.distributed.workers.WorkerConnectionServer;
@@ -138,15 +138,15 @@ public class DistributedAmuse {
         return debug;
     }
 
-    public ResourceSet resourceManager() {
+    public ResourceSet resources() {
         return resources;
     }
 
-    public PilotSet reservationManager() {
+    public PilotSet pilots() {
         return pilots;
     }
 
-    public JobSet jobManager() {
+    public JobSet jobs() {
         return jobs;
     }
 
@@ -194,11 +194,11 @@ public class DistributedAmuse {
         logger.debug("Ending job manager");
         jobs.end();
         
+        //wait until all pilots have quit
+        resources.endRegistry();
+        
         logger.debug("Ending reservation manager");
         pilots.end();
-
-        //end ibis after all resources have gone
-        jobs.endIbis();
 
         logger.debug("Ending resource manager");
         resources.end();

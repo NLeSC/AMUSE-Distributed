@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nl.esciencecenter.amuse.distributed.reservations;
+package nl.esciencecenter.amuse.distributed.pilots;
 
 import ibis.ipl.IbisIdentifier;
 
@@ -30,7 +30,7 @@ import java.util.UUID;
 import nl.esciencecenter.amuse.distributed.AmuseConfiguration;
 import nl.esciencecenter.amuse.distributed.DistributedAmuseException;
 import nl.esciencecenter.amuse.distributed.jobs.AmuseJob;
-import nl.esciencecenter.amuse.distributed.pilot.Pilot;
+import nl.esciencecenter.amuse.distributed.remote.Pilot;
 import nl.esciencecenter.amuse.distributed.resources.ResourceManager;
 import nl.esciencecenter.xenon.Xenon;
 import nl.esciencecenter.xenon.XenonException;
@@ -370,6 +370,7 @@ public class PilotManager {
         Map<String, String> result = new LinkedHashMap<String, String>();
 
         result.put("ID", Integer.toString(id));
+        result.put("Unique ID", uniqueID.toString());
         result.put("Queue", queueName);
         result.put("Node Count", Integer.toString(nodeCount));
         result.put("Time(minutes)", Integer.toString(timeMinutes));
@@ -377,6 +378,13 @@ public class PilotManager {
         result.put("Node Label", label);
         result.put("Resource Name", getResourceName());
         result.put("Resource ID", Integer.toString(getResourceID()));
+        
+        result.put("Ibis Identifier", String.valueOf(getIbisIdentifier()));
+        result.put("Running",  Boolean.toString(isRunning()));
+        result.put("Left", Boolean.toString(hasLeft()));
+        result.put("Done", Boolean.toString(isDone()));
+        
+        result.put("Xenon Job Status", String.valueOf(getXenonJobStatus()));
 
         return result;
     }
@@ -388,20 +396,35 @@ public class PilotManager {
         this.ibisIdentifier = ibis;
         notifyAll();
     }
+    
+    public synchronized IbisIdentifier getIbisIdentifier() {
+        return this.ibisIdentifier;
+    }
 
     //status, set by xenon job monitor
     synchronized void setXenonJobStatus(JobStatus status) {
         this.xenonJobStatus = status;
         notifyAll();
     }
-
-    //the pilot has left
-    void setLeft() {
-        this.left = true;
+    
+    //status, set by Xenon job monitor
+    synchronized JobStatus getXenonJobStatus() {
+        return this.xenonJobStatus;
     }
 
+    //the pilot has left
+    synchronized void setLeft() {
+        this.left = true;
+        notifyAll();
+    }
+    
+    synchronized boolean hasLeft() {
+        return this.left;
+    }
+    
+
     public synchronized boolean isRunning() {
-        return !this.left && this.ibisIdentifier != null && xenonJobStatus != null && xenonJobStatus.isRunning();  
+        return !this.left && this.ibisIdentifier != null;  
     }
 
     public synchronized boolean hasException() {
@@ -421,11 +444,11 @@ public class PilotManager {
 
     public synchronized String getStateString() {
         if (xenonJobStatus == null) {
-            return "unknown";
+            return "UNKNOWN";
         }
 
         if (isRunning()) {
-            return "running";
+            return "RUNNING";
         }
         
         return xenonJobStatus.getState();
@@ -435,9 +458,7 @@ public class PilotManager {
         jobs.add(amuseJob);
     }
 
-    public synchronized IbisIdentifier getIbisIdentifier() {
-        return this.ibisIdentifier;
-    }
+
     
     
     private synchronized int availableSlots() {

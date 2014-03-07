@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nl.esciencecenter.amuse.distributed.pilot;
+package nl.esciencecenter.amuse.distributed.remote;
 
 import ibis.ipl.Ibis;
 import ibis.ipl.IbisCreationFailedException;
@@ -138,10 +138,14 @@ public class Pilot implements MessageUpcall, ReceivePortConnectUpcall {
         
         //ID of this pilot
         String tag = id.toString();
+        
+        logger.debug("Creating Ibis");
 
         ibis = IbisFactory.createIbis(DistributedAmuse.IPL_CAPABILITIES, properties, true, null, null, tag,
                 DistributedAmuse.ONE_TO_ONE_PORT_TYPE, DistributedAmuse.MANY_TO_ONE_PORT_TYPE);
 
+        logger.debug("Creating Receive port");
+        
         receivePort = ibis.createReceivePort(DistributedAmuse.MANY_TO_ONE_PORT_TYPE, PORT_NAME, this, this, null);
         
         tmpDir = createTmpDir(id);
@@ -162,6 +166,8 @@ public class Pilot implements MessageUpcall, ReceivePortConnectUpcall {
         receivePort.enableMessageUpcalls();
         
         //ibis.registry().enableEvents();
+        
+        logger.info("Pilot fully initialized, waiting for commands...");
 
         //Wait until the pool is terminated by the DistributedAmuse master node
         //FIXME: no way to interrupt this wait.
@@ -170,63 +176,6 @@ public class Pilot implements MessageUpcall, ReceivePortConnectUpcall {
         logger.info("Pool terminated, ending pilot");
 
         ibis.end();
-    }
-
-    public static void main(String[] arguments) throws Exception {
-        File amuseHome = null;
-        UUID pilotID = null;
-        int slots = 1;
-        String bootCommand = null;
-        boolean debug = false;
-
-        Properties properties = new Properties();
-        properties.put(IbisProperties.POOL_NAME, "amuse");
-        properties.put(IbisProperties.SERVER_IS_HUB, "false");
-        //properties.put("ibis.managementclient", "true");
-        //properties.put("ibis.bytescount", "true");
-
-        for (int i = 0; i < arguments.length; i++) {
-            if (arguments[i].equalsIgnoreCase("--pilot-id")) {
-                i++;
-                pilotID = UUID.fromString(arguments[i]);
-            } else if (arguments[i].equalsIgnoreCase("--resource-name")) {
-                i++;
-                properties.put(IbisProperties.LOCATION, arguments[i]);
-            } else if (arguments[i].equalsIgnoreCase("--server-address")) {
-                i++;
-                properties.put(IbisProperties.SERVER_ADDRESS, arguments[i]);
-            } else if (arguments[i].equalsIgnoreCase("--amuse-home")) {
-                i++;
-                amuseHome = new File(arguments[i]);
-            } else if (arguments[i].equalsIgnoreCase("--hub-addresses")) {
-                i++;
-                properties.put(IbisProperties.HUB_ADDRESSES, arguments[i]);
-            } else if (arguments[i].equalsIgnoreCase("--slots")) {
-                i++;
-                slots = Integer.parseInt(arguments[i]);
-            } else if (arguments[i].equalsIgnoreCase("--boot-command")) {
-                i++;
-                bootCommand = arguments[i];
-            } else if (arguments[i].equalsIgnoreCase("--debug")) {
-                debug = true;
-            } else {
-                System.err.println("Unknown command line option: " + arguments[i]);
-                System.exit(1);
-            }
-        }
-
-        AmuseConfiguration configuration = new AmuseConfiguration(amuseHome);
-
-        System.err.println("running Pilot using properties:");
-        for (Entry<Object, Object> entry : properties.entrySet()) {
-            System.err.println(entry.getKey() + " = " + entry.getValue());
-        }
-        
-        Pilot pilot = new Pilot(configuration, properties, pilotID, bootCommand, debug);
-
-        pilot.run();
-
-        logger.debug("Main pilot thread ended");
     }
 
     private synchronized void addJobRunner(int jobID, JobRunner jobRunner) {
@@ -275,14 +224,13 @@ public class Pilot implements MessageUpcall, ReceivePortConnectUpcall {
 
             //hard coded worker job info
             WorkerDescription description = (WorkerDescription) readMessage.readObject();
-            IbisIdentifier[] nodes = (IbisIdentifier[]) readMessage.readObject();
 
             readMessage.finish();
 
             //FIXME: transfer files etc
 
             try {
-                JobRunner jobRunner = new JobRunner(jobID, description, configuration, nodes, resultPort, ibis, tmpDir);
+                JobRunner jobRunner = new JobRunner(jobID, description, configuration, resultPort, ibis, tmpDir);
 
                 addJobRunner(jobID, jobRunner);
 
@@ -340,6 +288,63 @@ public class Pilot implements MessageUpcall, ReceivePortConnectUpcall {
     public void lostConnection(ReceivePort receiver, SendPortIdentifier origin, Throwable cause) {
         logger.debug("Lost connection to {}", origin);
 
+    }
+
+    public static void main(String[] arguments) throws Exception {
+        File amuseHome = null;
+        UUID pilotID = null;
+        int slots = 1;
+        String bootCommand = null;
+        boolean debug = false;
+    
+        Properties properties = new Properties();
+        properties.put(IbisProperties.POOL_NAME, "amuse");
+        properties.put(IbisProperties.SERVER_IS_HUB, "false");
+        //properties.put("ibis.managementclient", "true");
+        //properties.put("ibis.bytescount", "true");
+    
+        for (int i = 0; i < arguments.length; i++) {
+            if (arguments[i].equalsIgnoreCase("--pilot-id")) {
+                i++;
+                pilotID = UUID.fromString(arguments[i]);
+            } else if (arguments[i].equalsIgnoreCase("--resource-name")) {
+                i++;
+                properties.put(IbisProperties.LOCATION, arguments[i]);
+            } else if (arguments[i].equalsIgnoreCase("--server-address")) {
+                i++;
+                properties.put(IbisProperties.SERVER_ADDRESS, arguments[i]);
+            } else if (arguments[i].equalsIgnoreCase("--amuse-home")) {
+                i++;
+                amuseHome = new File(arguments[i]);
+            } else if (arguments[i].equalsIgnoreCase("--hub-addresses")) {
+                i++;
+                properties.put(IbisProperties.HUB_ADDRESSES, arguments[i]);
+            } else if (arguments[i].equalsIgnoreCase("--slots")) {
+                i++;
+                slots = Integer.parseInt(arguments[i]);
+            } else if (arguments[i].equalsIgnoreCase("--boot-command")) {
+                i++;
+                bootCommand = arguments[i];
+            } else if (arguments[i].equalsIgnoreCase("--debug")) {
+                debug = true;
+            } else {
+                System.err.println("Unknown command line option: " + arguments[i]);
+                System.exit(1);
+            }
+        }
+    
+        AmuseConfiguration configuration = new AmuseConfiguration(amuseHome);
+    
+        System.err.println("running Pilot using properties:");
+        for (Entry<Object, Object> entry : properties.entrySet()) {
+            System.err.println(entry.getKey() + " = " + entry.getValue());
+        }
+        
+        Pilot pilot = new Pilot(configuration, properties, pilotID, bootCommand, debug);
+    
+        pilot.run();
+    
+        logger.debug("Main pilot thread ended");
     }
 
 }
