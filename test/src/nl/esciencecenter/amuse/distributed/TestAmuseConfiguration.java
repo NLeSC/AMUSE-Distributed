@@ -28,7 +28,7 @@ public class TestAmuseConfiguration {
 
     @Test
     public void testAmuseConfiguration() throws Exception {
-        File amuseHome = new File("fixtures");
+        File amuseHome = new File("test/fixtures");
         AmuseConfiguration config = new AmuseConfiguration(amuseHome);
 
         assertEquals(config.getConfigOption("JAVA_ENABLED"), "yes");
@@ -36,7 +36,7 @@ public class TestAmuseConfiguration {
 
     @Test(expected = DistributedAmuseException.class)
     public void testAmuseConfiguration_InvalidOption_DistributedAmuseException() throws Exception {
-        File amuseHome = new File("fixtures");
+        File amuseHome = new File("test/fixtures");
         AmuseConfiguration config = new AmuseConfiguration(amuseHome);
 
         assertEquals(config.getConfigOption("SOME_INVALID_CONFIG_OPTION"), "yes");
