@@ -39,7 +39,7 @@ import java.util.UUID;
 
 import nl.esciencecenter.amuse.distributed.AmuseConfiguration;
 import nl.esciencecenter.amuse.distributed.DistributedAmuse;
-import nl.esciencecenter.amuse.distributed.jobs.WorkerDescription;
+import nl.esciencecenter.amuse.distributed.jobs.WorkerJobDescription;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -211,7 +211,7 @@ public class Pilot implements MessageUpcall, ReceivePortConnectUpcall {
             ReceivePortIdentifier resultPort = (ReceivePortIdentifier) readMessage.readObject();
 
             //hard coded worker job info
-            WorkerDescription description = (WorkerDescription) readMessage.readObject();
+            WorkerJobDescription description = (WorkerJobDescription) readMessage.readObject();
 
             readMessage.finish();
 
