@@ -170,9 +170,9 @@ public class JobSet extends Thread {
         notifyAll();
     }
 
-    public ScriptJob submitScriptJob(String scriptName, String arguments, String scriptDir, String nodeLabel,
-            boolean reUseCodeFiles) throws DistributedAmuseException {
-        ScriptJob result = new ScriptJob(scriptName, arguments, scriptDir, nodeLabel, reUseCodeFiles, ibis, this);
+    public ScriptJob submitScriptJob(String scriptName, String arguments, String scriptDir, String nodeLabel
+            ) throws DistributedAmuseException {
+        ScriptJob result = new ScriptJob(scriptName, arguments, scriptDir, nodeLabel, ibis, this);
         
         addScriptJob(result);
         

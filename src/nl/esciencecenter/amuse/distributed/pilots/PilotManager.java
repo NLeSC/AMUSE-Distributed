@@ -144,11 +144,6 @@ public class PilotManager {
         javaArguments.add("--amuse-home");
         javaArguments.add(configuration.getAmuseHome().getAbsolutePath());
 
-        if (resource.getBootCommand() != null && !resource.getBootCommand().isEmpty()) {
-            javaArguments.add("--boot-command");
-            javaArguments.add(resource.getBootCommand());
-        }
-
         if (debug) {
             javaArguments.add("--debug");
         }
