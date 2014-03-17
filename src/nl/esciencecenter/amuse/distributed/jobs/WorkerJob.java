@@ -15,63 +15,141 @@
  */
 package nl.esciencecenter.amuse.distributed.jobs;
 
-import ibis.ipl.Ibis;
-import ibis.ipl.IbisIdentifier;
 import ibis.ipl.ReadMessage;
-import ibis.ipl.ReceivePortIdentifier;
 import ibis.ipl.WriteMessage;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.Serializable;
 
-import nl.esciencecenter.amuse.distributed.DistributedAmuseException;
+import nl.esciencecenter.amuse.distributed.AmuseMessage;
 
 /**
- * @author Niels Drost
+ * Description of a worker.
  * 
+ * 
+ * @author Niels Drost
  */
-public class WorkerJob extends AmuseJob {
+public class WorkerJob implements AmuseJob {
 
-    private final WorkerDescription description;
+    private final String id;
+    private final String executable;
+    private final String stdoutFile;
+    private final String stderrFile;
+    private final String nodeLabel;
 
-    //only for worker jobs
-    private ReceivePortIdentifier remoteWorkerPort = null;
+    private final int nrOfWorkers;
+    private final int nrOfThreads;
 
-    
-    public WorkerJob(WorkerDescription description, Ibis ibis, JobSet jobManager) throws DistributedAmuseException {
-        super(description.getNodeLabel(), description.getNrOfWorkers(), ibis, jobManager);
-        this.description = description;
-    }
+    private final int startupTimeout;
 
-    public WorkerDescription getDescription() {
-        return description;
-    }
-    
-    private synchronized void setRemoteWorkerPort(ReceivePortIdentifier port) {
-        this.remoteWorkerPort = port;
-    }
-
-    @Override
-    void writeJobDetails(WriteMessage writeMessage) throws IOException {
-        writeMessage.writeObject(description);
-    }
-
-    @Override
-    void readJobStatus(ReadMessage readMessage) throws ClassNotFoundException, IOException {
-//        ReceivePortIdentifier workerPort = (ReceivePortIdentifier) readMessage.readObject();
-//        
-//        setRemoteWorkerPort(workerPort);
+    public WorkerJob(String id, String executable, String stdoutFile, String stderrFile, String nodeLabel,
+            int nrOfWorkers, int nrOfThreads, int startupTimeout) {
+        this.id = id;
+        this.executable = executable;
+        this.stdoutFile = stdoutFile;
+        this.stderrFile = stderrFile;
+        this.nodeLabel = nodeLabel;
+        this.nrOfWorkers = nrOfWorkers;
+        this.nrOfThreads = nrOfThreads;
+        this.startupTimeout = startupTimeout;
     }
 
     /**
-     * @param readMessage
-     * @throws ClassNotFoundException
+     * @param message
+     *            a message containing all required fields of a worker description
      * @throws IOException
+     *             if the message cannot be read
      */
-    @Override
-    void readJobResult(ReadMessage readMessage) throws ClassNotFoundException, IOException {
+    public WorkerJob(AmuseMessage message, String id) throws IOException {
+        this.id = id;
+        executable = message.getString(0);
+        stdoutFile = message.getString(1);
+        stderrFile = message.getString(2);
+
+        if (message.getString(3).isEmpty()) {
+            nodeLabel = null;
+        } else {
+            nodeLabel = message.getString(3);
+        }
+
+        nrOfWorkers = message.getInteger(0);
+        nrOfThreads = message.getInteger(2);
+        startupTimeout = message.getInteger(3);
+    }
+    
+    //read input from message
+    public WorkerJob(ReadMessage message) throws IOException {
+        this.id = message.readString();
+        this.executable = message.readString();
+        this.stdoutFile = message.readString();
+        this.stderrFile = message.readString();
+        this.nodeLabel = message.readString();
+        
+        this.nrOfWorkers = message.readInt();
+        this.nrOfThreads = message.readInt();
+        
+        this.startupTimeout = message.readInt();
+    }
+    
+    public void writeInputTo(WriteMessage writeMessage) throws IOException {
+        writeMessage.writeString(id);
+        writeMessage.writeString(executable);
+        writeMessage.writeString(stdoutFile);
+        writeMessage.writeString(stderrFile);
+        writeMessage.writeString(nodeLabel);
+        writeMessage.writeInt(nrOfWorkers);
+        writeMessage.writeInt(nrOfThreads);
+        writeMessage.writeInt(startupTimeout);
+    }
+    
+    public void writeOutputTo(WriteMessage writeMessage) throws IOException {
         //NOTHING
     }
 
+    public void readOutputFrom(ReadMessage readMessage) throws IOException {
+        //NOTHING
+    }
 
+    public String getID() {
+        return id;
+    }
 
+    /**
+     * Executable relative to AMUSE distribution root.
+     */
+    public String getExecutable() {
+        return executable;
+    }
+
+    public String getStdoutFile() {
+        return stdoutFile;
+    }
+
+    public String getStderrFile() {
+        return stderrFile;
+    }
+
+    public String getNodeLabel() {
+        return nodeLabel;
+    }
+
+    public int getNrOfWorkers() {
+        return nrOfWorkers;
+    }
+
+    public int getNrOfThreads() {
+        return nrOfThreads;
+    }
+
+    public int getStartupTimeout() {
+        return startupTimeout;
+    }
+    
+    @Override
+    public String toString() {
+        return "WorkerDescription [executable=" + executable + ", stdoutFile=" + stdoutFile + ", stderrFile=" + stderrFile
+                + ", nodeLabel=" + nodeLabel + ", nrOfWorkers=" + nrOfWorkers + ", nrOfThreads="
+                + nrOfThreads + ", startupTimeout=" + startupTimeout + "]";
+    }
 }

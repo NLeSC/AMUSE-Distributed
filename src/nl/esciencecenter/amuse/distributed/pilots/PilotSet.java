@@ -20,7 +20,7 @@ import java.util.ArrayList;
 import java.util.UUID;
 
 import nl.esciencecenter.amuse.distributed.DistributedAmuseException;
-import nl.esciencecenter.amuse.distributed.jobs.AmuseJob;
+import nl.esciencecenter.amuse.distributed.jobs.JobManager;
 import nl.esciencecenter.amuse.distributed.resources.ResourceManager;
 import nl.esciencecenter.amuse.distributed.resources.ResourceSet;
 import nl.esciencecenter.xenon.Xenon;
@@ -191,7 +191,7 @@ public class PilotSet {
         return statusMonitor;
     }
 
-    public PilotManager getSuitablePilot(AmuseJob job) {
+    public PilotManager getSuitablePilot(JobManager job) {
         for (PilotManager pilot : getPilots()) {
             if (pilot.canRun(job)) {
                 return pilot;

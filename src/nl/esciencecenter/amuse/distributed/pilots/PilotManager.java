@@ -29,7 +29,7 @@ import java.util.UUID;
 
 import nl.esciencecenter.amuse.distributed.AmuseConfiguration;
 import nl.esciencecenter.amuse.distributed.DistributedAmuseException;
-import nl.esciencecenter.amuse.distributed.jobs.AmuseJob;
+import nl.esciencecenter.amuse.distributed.jobs.JobManager;
 import nl.esciencecenter.amuse.distributed.remote.Pilot;
 import nl.esciencecenter.amuse.distributed.resources.ResourceManager;
 import nl.esciencecenter.xenon.Xenon;
@@ -197,7 +197,7 @@ public class PilotManager {
     private final Path stdoutPath;
     private final Path stderrPath;
 
-    private final List<AmuseJob> jobs;
+    private final List<JobManager> jobs;
 
     private IbisIdentifier ibisIdentifier;
 
@@ -215,7 +215,7 @@ public class PilotManager {
     public PilotManager(ResourceManager resource, String queueName, int nodeCount, int timeMinutes, int slots, String nodeLabel,
             String options, String serverAddress, String[] hubAddresses, Xenon xenon, File tmpDir, boolean debug)
             throws DistributedAmuseException {
-        this.jobs = new ArrayList<AmuseJob>();
+        this.jobs = new ArrayList<JobManager>();
         ibisIdentifier = null;
 
         this.xenon = xenon;
@@ -459,7 +459,7 @@ public class PilotManager {
         return xenonJobStatus.getState();
     }
 
-    public synchronized void addAmuseJob(AmuseJob amuseJob) {
+    public synchronized void addAmuseJob(JobManager amuseJob) {
         jobs.add(amuseJob);
     }
 
@@ -469,11 +469,11 @@ public class PilotManager {
     private synchronized int availableSlots() {
         int usedSlotCount = 0;
 
-        Iterator<AmuseJob> iterator = jobs.iterator();
+        Iterator<JobManager> iterator = jobs.iterator();
 
         //ignore jobs that have already finished
         while (iterator.hasNext()) {
-            AmuseJob job = iterator.next();
+            JobManager job = iterator.next();
 
             if (job.isDone()) {
                 iterator.remove();
@@ -489,7 +489,7 @@ public class PilotManager {
         return result;
     }
 
-    public boolean canRun(AmuseJob job) {
+    public boolean canRun(JobManager job) {
         //check if we are running
         if (!isRunning()) {
             return false;

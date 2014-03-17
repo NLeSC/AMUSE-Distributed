@@ -27,7 +27,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import nl.esciencecenter.amuse.distributed.DistributedAmuse;
 import nl.esciencecenter.amuse.distributed.DistributedAmuseException;
-import nl.esciencecenter.amuse.distributed.jobs.AmuseJob;
+import nl.esciencecenter.amuse.distributed.jobs.JobManager;
 import nl.esciencecenter.amuse.distributed.jobs.WorkerJob;
 import nl.esciencecenter.amuse.distributed.pilots.PilotManager;
 import nl.esciencecenter.amuse.distributed.resources.ResourceManager;
@@ -263,7 +263,7 @@ public class WebInterface extends AbstractHandler {
     private void writeJobDetailsResponse(PrintWriter writer, String jobID) throws DistributedAmuseException {
         int id = Integer.parseInt(jobID);
 
-        AmuseJob job = distributedAmuse.jobs().getJob(id);
+        JobManager job = distributedAmuse.jobs().getJob(id);
         writer.println("<h1>Job " + jobID + "</h1>");
         writeMapAsTable(job.getStatusMap(), writer);
     }

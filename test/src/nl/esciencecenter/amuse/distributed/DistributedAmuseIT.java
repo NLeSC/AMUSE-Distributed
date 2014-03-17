@@ -15,7 +15,7 @@
  */
 package nl.esciencecenter.amuse.distributed;
 
-import nl.esciencecenter.amuse.distributed.jobs.WorkerDescription;
+import nl.esciencecenter.amuse.distributed.jobs.WorkerJob;
 
 import org.junit.Test;
 
@@ -33,7 +33,7 @@ public class DistributedAmuseIT {
         da.pilots().newPilot("local", "unlimited", 1, 10, 1, "default", "");
         da.pilots().waitForAllPilots();
         
-        WorkerDescription description = new WorkerDescription("some.id", "some.dir/some.worker.executable", "stdout", "stderr","default",
+        WorkerJob description = new WorkerJob("some.id", "some.dir/some.worker.executable", "stdout", "stderr","default",
                 1,1, 60);
         
         da.jobs().submitWorkerJob(description);

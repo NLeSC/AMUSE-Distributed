@@ -15,77 +15,44 @@
  */
 package nl.esciencecenter.amuse.distributed.jobs;
 
-import ibis.ipl.Ibis;
 import ibis.ipl.ReadMessage;
 import ibis.ipl.WriteMessage;
 
 import java.io.IOException;
 
-import nl.esciencecenter.amuse.distributed.DistributedAmuseException;
-
 /**
  * @author Niels Drost
  *
  */
-public class FunctionJob extends AmuseJob {
-    
-    public FunctionJob(String function, String arguments, String nodeLabel, Ibis ibis, JobSet jobManager) throws DistributedAmuseException {
-        super(nodeLabel, 1, ibis, jobManager);
-    }
-
-    private String result = null;
-
-
-    /**
-     * @return the result
-     * 
-     * @throws DistributedAmuseException
-     *             in case the job failed for some reason
-     */
-    public synchronized String getResult() throws DistributedAmuseException {
- 
-        waitUntilDone();
-
-         if (hasFailed()) {
-            throw new DistributedAmuseException("Error while running job " + this, getError());
-        }
-
-        return result;
-    }
-
+public class FunctionJob implements AmuseJob {
 
     /**
      * @param writeMessage
      * @throws IOException
      */
     @Override
-    void writeJobDetails(WriteMessage writeMessage) throws IOException {
+    public void writeInputTo(WriteMessage writeMessage) throws IOException {
         // TODO Auto-generated method stub
         
     }
 
-
     /**
-     * @param readMessage
-     * @throws ClassNotFoundException
+     * @param writeMessage
      * @throws IOException
      */
     @Override
-    void readJobStatus(ReadMessage readMessage) throws ClassNotFoundException, IOException {
+    public void writeOutputTo(WriteMessage writeMessage) throws IOException {
         // TODO Auto-generated method stub
         
     }
-
 
     /**
      * @param readMessage
-     * @throws ClassNotFoundException
      * @throws IOException
      */
     @Override
-    void readJobResult(ReadMessage readMessage) throws ClassNotFoundException, IOException {
+    public void readOutputFrom(ReadMessage readMessage) throws IOException {
         // TODO Auto-generated method stub
         
     }
-    
 }

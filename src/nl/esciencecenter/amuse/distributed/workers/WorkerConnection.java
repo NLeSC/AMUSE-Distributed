@@ -30,9 +30,9 @@ import java.util.UUID;
 
 import nl.esciencecenter.amuse.distributed.AmuseMessage;
 import nl.esciencecenter.amuse.distributed.DistributedAmuse;
-import nl.esciencecenter.amuse.distributed.jobs.AmuseJob;
+import nl.esciencecenter.amuse.distributed.jobs.JobManager;
 import nl.esciencecenter.amuse.distributed.jobs.JobSet;
-import nl.esciencecenter.amuse.distributed.jobs.WorkerDescription;
+import nl.esciencecenter.amuse.distributed.jobs.WorkerJob;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,9 +63,9 @@ public class WorkerConnection extends Thread {
 
     private final AmuseMessage initRequest;
 
-    private final WorkerDescription workerDescription;
+    private final WorkerJob workerDescription;
 
-    private final AmuseJob job;
+    private final JobManager job;
 
     /*
      * Initializes worker by reading settings from amuse, deploying the worker
@@ -92,7 +92,7 @@ public class WorkerConnection extends Thread {
         }
 
         //description of the worker, used for both the scheduler and the code proxy to start the worker properly
-        workerDescription = new WorkerDescription(initRequest, id);
+        workerDescription = new WorkerJob(initRequest, id);
 
         // initialize ibis ports
         receivePort = ibis.createReceivePort(DistributedAmuse.ONE_TO_ONE_PORT_TYPE, id);
