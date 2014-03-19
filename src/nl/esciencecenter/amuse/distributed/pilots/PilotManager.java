@@ -109,6 +109,10 @@ public class PilotManager {
         if (resource.getSchedulerType().equals("slurm")) {
             result.addJobOption("single.process", "true");
             result.setProcessesPerNode(slots);
+            
+            //disable processor affinity
+            result.addEnvironment("SLURM_CPU_BIND", "no");
+            result.addEnvironment("SBATCH_CPU_BIND", "no");
         }
 
         //parse and add job options
