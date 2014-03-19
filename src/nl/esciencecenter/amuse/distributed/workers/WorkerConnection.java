@@ -53,8 +53,6 @@ public class WorkerConnection extends Thread {
 
     private final SocketChannel socket;
 
-    private final JobSet jobManager;
-
     private final String id;
 
     private final ReceivePort receivePort;
@@ -74,8 +72,7 @@ public class WorkerConnection extends Thread {
      */
     WorkerConnection(SocketChannel socket, Ibis ibis, JobSet jobManager) throws Exception {
         this.socket = socket;
-        this.jobManager = jobManager;
-
+        
         this.id = UUID.randomUUID().toString();
 
         if (logger.isDebugEnabled()) {
@@ -147,24 +144,6 @@ public class WorkerConnection extends Thread {
             helloMessage.finish();
 
             sendPort.connect(remotePort, CONNECT_TIMEOUT, true);
-
-            //            // do init function at remote worker so it can initialize the code
-            //
-            //            // write init message
-            //            WriteMessage initWriteMessage = sendPort.newMessage();
-            //            initRequest.writeTo(initWriteMessage);
-            //            initWriteMessage.finish();
-            //
-            //            // read reply
-            //            AmuseMessage initReply = new AmuseMessage();
-            //            ReadMessage initReadMessage = receivePort.receive();
-            //            initReply.readFrom(initReadMessage);
-            //            initReadMessage.finish();
-            //
-            //            if (initReply.getError() != null) {
-            //                throw new IOException(initReply.getError());
-            //            }
-            //
 
             //send a reply
             AmuseMessage initReply = new AmuseMessage(initRequest.getCallID(), initRequest.getFunctionID(),

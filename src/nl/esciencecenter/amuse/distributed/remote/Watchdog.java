@@ -47,10 +47,6 @@ public class Watchdog implements RegistryEventHandler {
         left(ibis);
     }
 
-    /**
-     * @param arg0
-     * @param arg1
-     */
     @Override
     public synchronized void electionResult(String election, IbisIdentifier winner) {
         logger.debug("{} won election {}", winner, election);
@@ -82,9 +78,6 @@ public class Watchdog implements RegistryEventHandler {
         //IGNORE
     }
 
-    /**
-     * @param arg0
-     */
     @Override
     public synchronized void left(IbisIdentifier ibis) {
         logger.debug("{} left", ibis);

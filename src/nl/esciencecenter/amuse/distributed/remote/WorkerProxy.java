@@ -23,19 +23,14 @@ import ibis.ipl.SendPort;
 import ibis.ipl.WriteMessage;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.ProcessBuilder.Redirect;
 import java.lang.reflect.Field;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Arrays;
-import java.util.Map;
-
-import javax.swing.event.ListSelectionEvent;
 
 import nl.esciencecenter.amuse.distributed.AmuseConfiguration;
 import nl.esciencecenter.amuse.distributed.AmuseMessage;

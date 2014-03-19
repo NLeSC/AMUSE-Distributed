@@ -103,16 +103,6 @@ public class PilotSet {
         throw new DistributedAmuseException("Pilot " + pilotID + " not found");
     }
 
-    private synchronized int[] getPilotIDs() {
-        int[] result = new int[pilots.size()];
-
-        for (int i = 0; i < result.length; i++) {
-            result[i] = pilots.get(i).getAmuseID();
-        }
-
-        return result;
-    }
-
     //check if all pilots are running. will throw an error if any pilots are done/failed
     private boolean allPilotsRunning() throws DistributedAmuseException {
         PilotManager[] pilots = getPilots();

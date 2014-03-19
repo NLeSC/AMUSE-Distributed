@@ -70,8 +70,6 @@ public class Pilot implements MessageUpcall, ReceivePortConnectUpcall {
 
     private final Watchdog watchdog;
     
-    private UUID id;
-    
     private File tmpDir;
     
 
@@ -103,7 +101,6 @@ public class Pilot implements MessageUpcall, ReceivePortConnectUpcall {
     Pilot(AmuseConfiguration configuration, Properties properties, UUID id, boolean debug)
             throws IbisCreationFailedException, IOException, InterruptedException {
         this.configuration = configuration;
-        this.id = id;
         jobs = new HashMap<Integer, JobRunner>();
 
         initializeLogger(debug);
@@ -281,7 +278,6 @@ public class Pilot implements MessageUpcall, ReceivePortConnectUpcall {
     public static void main(String[] arguments) throws Exception {
         File amuseHome = null;
         UUID pilotID = null;
-        int slots = 1;
         boolean debug = false;
     
         Properties properties = new Properties();
@@ -306,9 +302,6 @@ public class Pilot implements MessageUpcall, ReceivePortConnectUpcall {
             } else if (arguments[i].equalsIgnoreCase("--hub-addresses")) {
                 i++;
                 properties.put(IbisProperties.HUB_ADDRESSES, arguments[i]);
-            } else if (arguments[i].equalsIgnoreCase("--slots")) {
-                i++;
-                slots = Integer.parseInt(arguments[i]);
             } else if (arguments[i].equalsIgnoreCase("--debug")) {
                 debug = true;
             } else {
