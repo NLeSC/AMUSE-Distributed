@@ -19,23 +19,22 @@ import ibis.ipl.Ibis;
 import ibis.ipl.IbisIdentifier;
 import ibis.ipl.ReadMessage;
 import ibis.ipl.ReceivePort;
+import ibis.ipl.ReceivePortIdentifier;
 import ibis.ipl.SendPort;
 import ibis.ipl.WriteMessage;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.ProcessBuilder.Redirect;
-import java.lang.reflect.Field;
 import java.net.InetAddress;
 import java.net.SocketTimeoutException;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.Arrays;
 
 import nl.esciencecenter.amuse.distributed.AmuseConfiguration;
 import nl.esciencecenter.amuse.distributed.AmuseMessage;
 import nl.esciencecenter.amuse.distributed.DistributedAmuse;
 import nl.esciencecenter.amuse.distributed.DistributedAmuseException;
+import nl.esciencecenter.amuse.distributed.jobs.AmuseJobDescription;
 import nl.esciencecenter.amuse.distributed.jobs.WorkerJobDescription;
 import nl.esciencecenter.amuse.distributed.workers.OutputForwarder;
 
@@ -49,9 +48,9 @@ import org.slf4j.LoggerFactory;
  * @author Niels Drost
  * 
  */
-public class WorkerProxy extends Thread {
+public class WorkerJobRunner extends JobRunner {
 
-    private static final Logger logger = LoggerFactory.getLogger(WorkerProxy.class);
+    static final Logger logger = LoggerFactory.getLogger(WorkerJobRunner.class);
 
     //how long until we give up on a worker initializing?
     private static final int ACCEPT_TIMEOUT = 100; // ms
@@ -64,20 +63,14 @@ public class WorkerProxy extends Thread {
 
     private final SocketChannel socket;
 
-    private final Process process;
     private int exitcode = 0;
 
     private final OutputForwarder out;
     private final OutputForwarder err;
 
     private final WorkerJobDescription description;
-    private final AmuseConfiguration amuseConfiguration;
 
     //connection back to AMUSE
-
-    private final Ibis ibis;
-
-    private Exception error = null;
 
     private static Process startWorkerProcess(WorkerJobDescription description, AmuseConfiguration amuseConfiguration,
             int localSocketPort, File tempDirectory) throws Exception {
@@ -183,11 +176,12 @@ public class WorkerProxy extends Thread {
     /**
      * Starts a worker proxy. Make take a while.
      */
-    public WorkerProxy(WorkerJobDescription description, AmuseConfiguration amuseConfiguration, Ibis ibis, File tempDirectory,
-            int jobID) throws Exception {
-        this.description = description;
-        this.amuseConfiguration = amuseConfiguration;
-        this.ibis = ibis;
+    public WorkerJobRunner(AmuseJobDescription description, AmuseConfiguration configuration, ReceivePortIdentifier resultPort,
+            Ibis ibis, File tmpDir, ReadMessage message) throws Exception {
+        super(description, configuration, resultPort, ibis, tmpDir);
+
+        this.description = (WorkerJobDescription) description;
+        message.finish();
 
         ServerSocketChannel serverSocket = ServerSocketChannel.open();
         //serverSocket.bind(new InetSocketAddress(InetAddress.getByName(null), 0), 10);
@@ -198,7 +192,7 @@ public class WorkerProxy extends Thread {
         logger.debug("Bound server socket to " + serverSocket.socket().getLocalSocketAddress());
 
         //create process
-        process = startWorkerProcess(description, amuseConfiguration, serverSocket.socket().getLocalPort(), tempDirectory);
+        process = startWorkerProcess(this.description, amuseConfiguration, serverSocket.socket().getLocalPort(), tmpDir);
 
         //attach streams
         out = new OutputForwarder(process.getInputStream(), description.getStdoutFile(), ibis);
@@ -212,49 +206,9 @@ public class WorkerProxy extends Thread {
         logger.info("connection with local worker process established");
 
         //start a thread to start handling amuse requests
-        setName("Worker Proxy for " + description.getID());
+        setName("Worker Job Runner for " + description);
         setDaemon(true);
         start();
-    }
-
-    private synchronized void setError(Exception error) {
-        this.error = error;
-    }
-
-    public synchronized Exception getError() {
-        return error;
-    }
-
-    private synchronized void nativeKill() {
-        if (process == null) {
-            return;
-        }
-
-        try {
-            Field f = process.getClass().getDeclaredField("pid");
-            f.setAccessible(true);
-
-            Object pid = f.get(process);
-
-            ProcessBuilder builder = new ProcessBuilder("/bin/sh", "-c", "kill -9 " + pid.toString());
-            
-            builder.redirectError(Redirect.INHERIT);
-            //builder.redirectInput();
-            builder.redirectOutput(Redirect.INHERIT);
-
-            logger.info("Killing process using command: " + Arrays.toString(builder.command().toArray()));
-            
-            Process killProcess = builder.start();
-            
-            killProcess.getOutputStream().close();
-            
-            int exitcode = killProcess.waitFor();
-            
-            logger.info("native kill done, result is " + exitcode);
-
-        } catch (Throwable t) {
-            logger.error("Error on (forcibly) killing process", t);
-        }
     }
 
     public synchronized void end() {
@@ -301,6 +255,7 @@ public class WorkerProxy extends Thread {
     public void run() {
         boolean running = true;
         long start, finish;
+        Exception error = null;
 
         AmuseMessage requestMessage = new AmuseMessage();
         AmuseMessage resultMessage = new AmuseMessage();
@@ -310,7 +265,7 @@ public class WorkerProxy extends Thread {
 
         try {
             sendPort = ibis.createSendPort(DistributedAmuse.ONE_TO_ONE_PORT_TYPE);
-            receivePort = ibis.createReceivePort(DistributedAmuse.ONE_TO_ONE_PORT_TYPE, description.getID());
+            receivePort = ibis.createReceivePort(DistributedAmuse.ONE_TO_ONE_PORT_TYPE, Integer.toString(description.getID()));
 
             receivePort.enableConnections();
 
@@ -320,7 +275,7 @@ public class WorkerProxy extends Thread {
 
             //create a connection back to the amuse process via the ibis there.
             logger.debug("connecting to receive port of worker at amuse node");
-            sendPort.connect(amuse, description.getID());
+            sendPort.connect(amuse, Integer.toString(description.getID()));
             logger.debug("connected, saying hello");
             WriteMessage helloMessage = sendPort.newMessage();
             helloMessage.writeObject(receivePort.identifier());
@@ -382,7 +337,7 @@ public class WorkerProxy extends Thread {
             }
         } catch (Exception e) {
             logger.error("Error while handling request, stopping worker", e);
-            setError(e);
+            error = e;
         }
         if (sendPort != null) {
             try {
@@ -398,7 +353,14 @@ public class WorkerProxy extends Thread {
                 //IGNORE
             }
         }
-        logger.debug("Worker proxy done");
+        logger.debug("Worker job done, sending result to amuse");
+
+        sendResult(error);
+    }
+
+    @Override
+    void writeResultData(WriteMessage message) throws IOException {
+        //NOTHING
     }
 
 }

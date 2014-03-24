@@ -70,9 +70,6 @@ public class Watchdog implements RegistryEventHandler {
         }
     }
 
-    /**
-     * @param arg0
-     */
     @Override
     public synchronized void joined(IbisIdentifier arg0) {
         //IGNORE
@@ -135,7 +132,7 @@ public class Watchdog implements RegistryEventHandler {
         } else {
             logger.info("Pool terminated");
         }
-        
+
         return terminated;
     }
 

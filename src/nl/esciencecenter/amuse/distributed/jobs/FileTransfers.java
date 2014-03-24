@@ -35,12 +35,14 @@ import org.slf4j.LoggerFactory;
  * 
  */
 public class FileTransfers {
-    
+
     public static final int BUFFER_SIZE = 1000;
 
     private static final Logger logger = LoggerFactory.getLogger(FileTransfers.class);
 
-    static void writeFile(File file, WriteMessage writeMessage, ByteBuffer buffer) throws IOException {
+    public static void writeFile(File file, WriteMessage writeMessage, ByteBuffer buffer) throws IOException {
+        logger.debug("Writing file: " + file);
+        
         writeMessage.writeString(file.getPath());
         writeMessage.writeLong(file.length());
         try (FileChannel channel = FileChannel.open(file.toPath(), StandardOpenOption.READ)) {
@@ -61,7 +63,7 @@ public class FileTransfers {
 
     }
 
-    static void addFiles(File file, ArrayList<File> result) {
+    public static void addFiles(File file, ArrayList<File> result) {
         if (file.isFile()) {
             result.add(file);
             logger.debug("Added file: " + file);
@@ -72,19 +74,21 @@ public class FileTransfers {
         }
     }
 
-    static void writeDirectory(String filename, WriteMessage writeMessage) throws IOException {
-        ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);
+    public static void writeDirectory(File directory, WriteMessage writeMessage) throws IOException {
+        logger.debug("Writing directory: " + directory);
         
-        File directory = new File(filename);
+        ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);
 
         if (!directory.isDirectory()) {
-            throw new IOException("Directory \"" + filename + "\" not found");
+            throw new IOException("Directory \"" + directory + "\" not found");
         }
 
         ArrayList<File> files = new ArrayList<File>();
 
         //recursively add all files
-        addFiles(directory, files);
+        for (File child : directory.listFiles()) {
+            addFiles(child, files);
+        }
 
         writeMessage.writeInt(files.size());
         for (File file : files) {
@@ -92,13 +96,15 @@ public class FileTransfers {
         }
     }
 
-    static void readFile(File directory, ReadMessage readMessage, ByteBuffer buffer) throws IOException {
+    public static void readFile(File directory, ReadMessage readMessage, ByteBuffer buffer) throws IOException {
         String filename = readMessage.readString();
         long size = readMessage.readLong();
-
+        
         File file = new File(directory, filename);
 
-        logger.debug("Reading file " + file);
+        file.getParentFile().mkdirs();
+
+        logger.debug("Reading file with filename {} to directory {}. Writing to file {}", filename ,directory, file);
 
         try (FileChannel channel = FileChannel.open(file.toPath(), StandardOpenOption.WRITE, StandardOpenOption.CREATE)) {
 
@@ -120,17 +126,15 @@ public class FileTransfers {
         }
     }
 
-    static void readDirectory(String filename, ReadMessage readMessage) throws IOException {
+    public static void readDirectory(File directory, ReadMessage readMessage) throws IOException {
         ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);
-        
-        File directory = new File(filename);
 
         if (!directory.isDirectory()) {
             directory.mkdir();
         }
 
         if (!directory.isDirectory()) {
-            throw new IOException("Directory \"" + filename + "\" could not be created");
+            throw new IOException("Directory \"" + directory + "\" could not be created");
         }
 
         int count = readMessage.readInt();

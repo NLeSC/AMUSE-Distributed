@@ -97,7 +97,7 @@ public class ResourceManager {
     }
 
     public ResourceManager(String name, String location, String gateway, String amuseDir, String schedulerType, boolean startHub,
-           Xenon xenon, Server iplServer) throws DistributedAmuseException {
+            Xenon xenon, Server iplServer) throws DistributedAmuseException {
         this.id = getNextID();
         this.name = name;
         this.location = location;
@@ -213,7 +213,7 @@ public class ResourceManager {
                 amuseHome = userHome.resolve(this.amuseDir);
             }
             RelativePath amuseConfig = amuseHome.resolve("config.mk");
-            
+
             logger.debug("Downloading amuse config for " + getName() + " from " + amuseConfig);
 
             Path path = xenon.files().newPath(filesystem, amuseConfig);
@@ -305,8 +305,7 @@ public class ResourceManager {
     @Override
     public String toString() {
         return "Resource [id=" + id + ", name=" + name + ", location=" + location + ", amuseDir=" + amuseDir + ", schedulerType="
-                + schedulerType + ", configuration=" + configuration + ", startHub=" + startHub + ", hub=" + hub
-                + "]";
+                + schedulerType + ", configuration=" + configuration + ", startHub=" + startHub + ", hub=" + hub + "]";
     }
 
     public Map<String, String> getStatusMap() throws DistributedAmuseException {

@@ -19,6 +19,7 @@ import ibis.ipl.Ibis;
 import ibis.ipl.ReadMessage;
 import ibis.ipl.WriteMessage;
 
+import java.io.File;
 import java.io.IOException;
 
 import nl.esciencecenter.amuse.distributed.DistributedAmuseException;
@@ -32,7 +33,7 @@ public class ScriptJob extends AmuseJob {
     private final ScriptJobDescription description;
 
     public ScriptJob(ScriptJobDescription description, Ibis ibis, JobSet jobManager) throws DistributedAmuseException {
-        super(description.getNodeLabel(), 1, ibis, jobManager);
+        super(description, ibis, jobManager);
         this.description = description;
     }
 
@@ -42,20 +43,16 @@ public class ScriptJob extends AmuseJob {
 
     @Override
     void writeJobData(WriteMessage writeMessage) throws IOException {
-        writeMessage.writeObject(description);
-
-        FileTransfers.writeDirectory(description.getScriptDir(), writeMessage);
+        FileTransfers.writeDirectory(new File(description.getScriptDir()), writeMessage);
 
         if (description.getInputDir() != null) {
-            FileTransfers.writeDirectory(description.getInputDir(), writeMessage);
+            FileTransfers.writeDirectory(new File(description.getInputDir()), writeMessage);
         }
     }
 
     @Override
     void readJobResult(ReadMessage readMessage) throws ClassNotFoundException, IOException {
-        if (description.getOutputDir() != null) {
-            FileTransfers.readDirectory(description.getOutputDir(), readMessage);
-        }
+        FileTransfers.readDirectory(new File(description.getOutputDir()), readMessage);
     }
 
 }

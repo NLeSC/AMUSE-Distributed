@@ -22,52 +22,86 @@ import ibis.ipl.WriteMessage;
 
 import java.io.File;
 import java.io.IOException;
-
-import nl.esciencecenter.amuse.distributed.AmuseConfiguration;
-import nl.esciencecenter.amuse.distributed.DistributedAmuse;
-import nl.esciencecenter.amuse.distributed.jobs.WorkerJobDescription;
+import java.lang.ProcessBuilder.Redirect;
+import java.lang.reflect.Field;
+import java.util.Arrays;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import nl.esciencecenter.amuse.distributed.AmuseConfiguration;
+import nl.esciencecenter.amuse.distributed.DistributedAmuse;
+import nl.esciencecenter.amuse.distributed.jobs.AmuseJobDescription;
+
 /**
- * A job running on a pilot node.S
- * 
  * @author Niels Drost
  * 
  */
-public class JobRunner extends Thread {
+public abstract class JobRunner extends Thread {
 
     private static final Logger logger = LoggerFactory.getLogger(JobRunner.class);
 
-    private final int jobID;
-    private final WorkerProxy workerProxy;
-    private final ReceivePortIdentifier resultPort;
-    private final Ibis ibis;
+    protected Process process = null;
 
-    public JobRunner(int jobID, WorkerJobDescription description, AmuseConfiguration configuration, ReceivePortIdentifier resultPort, Ibis ibis, File tmpDir)
-            throws Exception {
-        this.jobID = jobID;
+    protected final AmuseJobDescription description;
+    protected final AmuseConfiguration amuseConfiguration;
+    protected final Ibis ibis;
+    protected final ReceivePortIdentifier resultPort;
+    protected final File tmpDir;
+    protected final File sandbox;
+
+    /**
+     * @param jobID
+     * @param amuseConfiguration
+     * @param resultPort
+     * @param ibis
+     * @param tmpDir
+     */
+    public JobRunner(AmuseJobDescription description, AmuseConfiguration amuseConfiguration, ReceivePortIdentifier resultPort,
+            Ibis ibis, File tmpDir) {
+        this.description = description;
+        this.amuseConfiguration = amuseConfiguration;
         this.resultPort = resultPort;
         this.ibis = ibis;
-        
-        logger.debug("Starting job runner....");
+        this.tmpDir = tmpDir;
 
-        workerProxy = new WorkerProxy(description, configuration, ibis, tmpDir, jobID);
-
-        setName("Job Runner for " + jobID);
+        this.sandbox = new File(tmpDir, Integer.toString(description.getID()));
     }
 
-    public void run() {
-        logger.debug("waiting for worker job {} to finish", jobID);
-
-        try {
-            workerProxy.join();
-        } catch (InterruptedException e) {
-            workerProxy.end();
+    protected synchronized void nativeKill() {
+        if (process == null) {
+            return;
         }
 
-        logger.debug("worker {} done. Sending result to main amuse node.", jobID);
+        try {
+            Field f = process.getClass().getDeclaredField("pid");
+            f.setAccessible(true);
+
+            Object pid = f.get(process);
+
+            ProcessBuilder builder = new ProcessBuilder("/bin/sh", "-c", "kill -9 " + pid.toString());
+
+            builder.redirectError(Redirect.INHERIT);
+            //builder.redirectInput();
+            builder.redirectOutput(Redirect.INHERIT);
+
+            logger.info("Killing process using command: " + Arrays.toString(builder.command().toArray()));
+
+            Process killProcess = builder.start();
+
+            killProcess.getOutputStream().close();
+
+            int exitcode = killProcess.waitFor();
+
+            logger.info("native kill done, result is " + exitcode);
+
+        } catch (Throwable t) {
+            logger.error("Error on (forcibly) killing process", t);
+        }
+    }
+
+    protected void sendResult(Exception error) {
+        logger.debug("worker done. Sending result to main amuse node.");
 
         //send result message to job
         try {
@@ -77,7 +111,10 @@ public class JobRunner extends Thread {
 
             WriteMessage message = sendPort.newMessage();
 
-            message.writeObject(workerProxy.getError());
+            message.writeObject(error);
+            
+            writeResultData(message);
+            
             message.finish();
 
             sendPort.close();
@@ -87,5 +124,7 @@ public class JobRunner extends Thread {
         }
 
     }
+    
+    abstract void writeResultData(WriteMessage message) throws IOException ;
 
 }
