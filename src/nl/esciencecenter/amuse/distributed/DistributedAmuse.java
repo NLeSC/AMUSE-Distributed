@@ -56,9 +56,6 @@ public class DistributedAmuse {
 
     private static final Logger logger = LoggerFactory.getLogger(DistributedAmuse.class);
 
-    //id of this distributed amuse instance, used whenever a unique name is needed.
-    private final UUID id;
-
     //resources potentially available for starting pilots on. Also starts hub on each resource, if required.
     private final ResourceSet resources;
 
@@ -111,7 +108,6 @@ public class DistributedAmuse {
     public DistributedAmuse(UUID id, String codeDir, String amuseRootDir, int webInterfacePort, boolean debug, boolean startHubs,
             int workerStartupTimeout) throws DistributedAmuseException {
         this.debug = debug;
-        this.id = id;
         initializeLogger(debug);
 
         logger.info("Initializing Distributed Amuse {} with web interface on port {}, debug {}, and starting hubs {}",

@@ -110,25 +110,7 @@ public class ResourceManager {
         home = getHome(xenon);
         filesystem = home.getFileSystem();
 
-        try {
-            logger.debug("home exists 1: " + xenon.files().exists(home));
-        } catch (XenonException e) {
-            logger.error("Exist failed", e);
-        }
-
-        try {
-            logger.debug("home exists 2a: " + xenon.files().exists(home));
-        } catch (XenonException e) {
-            logger.error("Exist failed", e);
-        }
-
         this.configuration = downloadConfiguration(filesystem, xenon);
-
-        try {
-            logger.debug("home exists 2b: " + xenon.files().exists(home));
-        } catch (XenonException e) {
-            logger.error("Exist failed", e);
-        }
 
         if (!configuration.isJavaEnabled()) {
             throw new DistributedAmuseException("Resource " + name

@@ -31,6 +31,7 @@ import ibis.ipl.WriteMessage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -70,7 +71,7 @@ public class Pilot implements MessageUpcall, ReceivePortConnectUpcall {
 
     private final Watchdog watchdog;
 
-    private File tmpDir;
+    private Path tmpDir;
 
     private static void initializeLogger(boolean debug) {
         if (debug) {
@@ -82,7 +83,7 @@ public class Pilot implements MessageUpcall, ReceivePortConnectUpcall {
             logger.debug("DEBUG Enabled");
         }
     }
-
+    
     Pilot(AmuseConfiguration configuration, Properties properties, int id, boolean debug) throws IbisCreationFailedException,
             IOException, InterruptedException {
         this.configuration = configuration;
@@ -103,9 +104,8 @@ public class Pilot implements MessageUpcall, ReceivePortConnectUpcall {
         logger.debug("Creating Receive port");
 
         receivePort = ibis.createReceivePort(DistributedAmuse.MANY_TO_ONE_PORT_TYPE, PORT_NAME, this, this, null);
-
-        tmpDir = Files.createTempDirectory("distributed-amuse").toFile();
-
+        
+        tmpDir = Files.createTempDirectory("distributed-amuse-pilot-" + id + "-");
     }
 
     /**
@@ -241,7 +241,7 @@ public class Pilot implements MessageUpcall, ReceivePortConnectUpcall {
 
             if (jobRunner != null) {
                 //signal the thread it is time to cancel the job
-                jobRunner.interrupt();
+                jobRunner.killProcess();
             }
         } else {
             logger.error("Failed to handle message, unknown command: " + command);

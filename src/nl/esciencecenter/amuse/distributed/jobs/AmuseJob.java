@@ -85,7 +85,8 @@ public abstract class AmuseJob extends Thread implements MessageUpcall {
         this.state = State.PENDING;
 
         try {
-            resultReceivePort = ibis.createReceivePort(DistributedAmuse.MANY_TO_ONE_PORT_TYPE, "job-" + description.getID(), this);
+            resultReceivePort = ibis
+                    .createReceivePort(DistributedAmuse.MANY_TO_ONE_PORT_TYPE, "job-" + description.getID(), this);
             resultReceivePort.enableConnections();
             resultReceivePort.enableMessageUpcalls();
         } catch (IOException e) {
@@ -104,7 +105,7 @@ public abstract class AmuseJob extends Thread implements MessageUpcall {
     public AmuseJobDescription getDescription() {
         return description;
     }
-    
+
     public int getJobID() {
         return description.getID();
     }
@@ -324,16 +325,23 @@ public abstract class AmuseJob extends Thread implements MessageUpcall {
      * Handles incoming result message from Pilots
      */
     @Override
-    public void upcall(ReadMessage message) throws IOException, ClassNotFoundException {
+    public void upcall(ReadMessage message) {
         logger.debug("Reading result message");
 
-        Exception error = (Exception) message.readObject();
+        Exception error;
+        try {
+            error = (Exception) message.readObject();
 
-        //implemented by job sub type
-        readJobResult(message);
+            //implemented by job sub type
+            readJobResult(message);
+
+        } catch (IOException | ClassNotFoundException e) {
+            logger.error("Error while reading result", e);
+            error = e;
+        }
 
         if (error != null) {
-            setError(new DistributedAmuseException("Remote node reported error", error));
+            setError(new DistributedAmuseException("Remote node reported error: " + error, error));
         } else {
             setState(State.DONE);
         }
@@ -373,6 +381,5 @@ public abstract class AmuseJob extends Thread implements MessageUpcall {
         return "AmuseJob [jobManager=" + jobManager + ", description=" + description + ", state=" + state + ", target=" + target
                 + ", error=" + error + ", expirationDate=" + expirationDate + "]";
     }
-
 
 }

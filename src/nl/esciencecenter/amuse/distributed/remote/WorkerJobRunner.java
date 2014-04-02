@@ -29,6 +29,7 @@ import java.net.InetAddress;
 import java.net.SocketTimeoutException;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.nio.file.Path;
 
 import nl.esciencecenter.amuse.distributed.AmuseConfiguration;
 import nl.esciencecenter.amuse.distributed.AmuseMessage;
@@ -36,7 +37,6 @@ import nl.esciencecenter.amuse.distributed.DistributedAmuse;
 import nl.esciencecenter.amuse.distributed.DistributedAmuseException;
 import nl.esciencecenter.amuse.distributed.jobs.AmuseJobDescription;
 import nl.esciencecenter.amuse.distributed.jobs.WorkerJobDescription;
-import nl.esciencecenter.amuse.distributed.workers.OutputForwarder;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,17 +63,12 @@ public class WorkerJobRunner extends JobRunner {
 
     private final SocketChannel socket;
 
-    private int exitcode = 0;
-
-    private final OutputForwarder out;
-    private final OutputForwarder err;
-
     private final WorkerJobDescription description;
 
     //connection back to AMUSE
 
-    private static Process startWorkerProcess(WorkerJobDescription description, AmuseConfiguration amuseConfiguration,
-            int localSocketPort, File tempDirectory) throws Exception {
+    private static ProcessBuilder createProcessBuilder(WorkerJobDescription description, AmuseConfiguration amuseConfiguration,
+            int localSocketPort, Path tmpDir) throws Exception {
         File executable = new File(amuseConfiguration.getAmuseHome() + File.separator + description.getExecutable());
 
         if (!executable.canExecute()) {
@@ -127,22 +122,12 @@ public class WorkerJobRunner extends JobRunner {
         logger.info("starting worker process, command = " + builder.command());
 
         //start process and return
-        return builder.start();
+        return builder;
     }
 
-    //small utility to figure out if the process is still running.
-    private static boolean hasEnded(Process process) {
-        try {
-            process.exitValue();
-            //we only end up here if the process is done
-            return true;
-        } catch (IllegalThreadStateException e) {
-            //we got this exception as the process is not done yet
-            return false;
-        }
-    }
+   
 
-    private static SocketChannel acceptConnection(ServerSocketChannel serverSocket, Process process) throws IOException,
+    private SocketChannel acceptConnection(ServerSocketChannel serverSocket) throws IOException,
             DistributedAmuseException {
         logger.debug("accepting connection");
 
@@ -162,9 +147,9 @@ public class WorkerJobRunner extends JobRunner {
                 return result;
             } catch (SocketTimeoutException e) {
                 logger.debug("got timeout exception", e);
-                if (hasEnded(process)) {
+                if (hasEnded()) {
                     throw new DistributedAmuseException("worker failed to connect to java pilot, exited with exit code "
-                            + process.exitValue());
+                            + getExitCode());
                 } else {
                     logger.debug("Got a timeout in accepting connection from worker. will keep trying");
                 }
@@ -177,7 +162,7 @@ public class WorkerJobRunner extends JobRunner {
      * Starts a worker proxy. Make take a while.
      */
     public WorkerJobRunner(AmuseJobDescription description, AmuseConfiguration configuration, ReceivePortIdentifier resultPort,
-            Ibis ibis, File tmpDir, ReadMessage message) throws Exception {
+            Ibis ibis, Path tmpDir, ReadMessage message) throws Exception {
         super(description, configuration, resultPort, ibis, tmpDir);
 
         this.description = (WorkerJobDescription) description;
@@ -192,15 +177,9 @@ public class WorkerJobRunner extends JobRunner {
         logger.debug("Bound server socket to " + serverSocket.socket().getLocalSocketAddress());
 
         //create process
-        process = startWorkerProcess(this.description, amuseConfiguration, serverSocket.socket().getLocalPort(), tmpDir);
+        startProcess(createProcessBuilder(this.description, amuseConfiguration, serverSocket.socket().getLocalPort(), tmpDir));
 
-        //attach streams
-        out = new OutputForwarder(process.getInputStream(), description.getStdoutFile(), ibis);
-        err = new OutputForwarder(process.getErrorStream(), description.getStderrFile(), ibis);
-
-        logger.info("process started");
-
-        socket = acceptConnection(serverSocket, process);
+        socket = acceptConnection(serverSocket);
         serverSocket.close();
 
         logger.info("connection with local worker process established");
@@ -211,51 +190,12 @@ public class WorkerJobRunner extends JobRunner {
         start();
     }
 
-    public synchronized void end() {
-        if (process != null) {
-            process.destroy();
-
-            try {
-                exitcode = process.exitValue();
-                logger.info("Process ended with result " + exitcode);
-            } catch (IllegalThreadStateException e) {
-                logger.error("Process not ended after process.destroy()! Trying native kill");
-                nativeKill();
-                try {
-                    exitcode = process.exitValue();
-                    logger.info("Process ended with result " + exitcode);
-                } catch (IllegalThreadStateException e2) {
-                    logger.error("Process not ended after native kill");
-                }
-            }
-        }
-
-        if (out != null) {
-            // wait for out and err a bit
-            try {
-                out.join(1000);
-            } catch (InterruptedException e) {
-                // IGNORE
-            }
-        }
-
-        if (err != null) {
-            try {
-                err.join(1000);
-            } catch (InterruptedException e) {
-                // IGNORE
-            }
-        }
-
-    }
-
     /**
      * First connects to the "home" AMUSE ibis. Then continuously receives a message, performs a call, sends a reply.
      */
     public void run() {
         boolean running = true;
         long start, finish;
-        Exception error = null;
 
         AmuseMessage requestMessage = new AmuseMessage();
         AmuseMessage resultMessage = new AmuseMessage();
@@ -337,7 +277,7 @@ public class WorkerJobRunner extends JobRunner {
             }
         } catch (Exception e) {
             logger.error("Error while handling request, stopping worker", e);
-            error = e;
+            setError(e);
         }
         if (sendPort != null) {
             try {
@@ -353,9 +293,12 @@ public class WorkerJobRunner extends JobRunner {
                 //IGNORE
             }
         }
+        
+        waitForProcess();
+        
         logger.debug("Worker job done, sending result to amuse");
 
-        sendResult(error);
+        sendResult();
     }
 
     @Override

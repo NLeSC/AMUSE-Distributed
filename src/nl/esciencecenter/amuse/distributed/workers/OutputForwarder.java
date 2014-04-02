@@ -54,6 +54,14 @@ public class OutputForwarder extends Thread {
         setName("output forwarder");
         start();
     }
+    
+    public void waitFor(long timeout) {
+        try {
+            this.join(timeout);
+        } catch (InterruptedException e) {
+            //IGNORE
+        }
+    }
 
     /**
      * Forwards input stream to given output stream.

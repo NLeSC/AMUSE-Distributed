@@ -26,7 +26,6 @@ import ibis.ipl.WriteMessage;
 
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
-import java.util.UUID;
 
 import nl.esciencecenter.amuse.distributed.AmuseMessage;
 import nl.esciencecenter.amuse.distributed.DistributedAmuse;

@@ -20,13 +20,14 @@ import ibis.ipl.ReadMessage;
 import ibis.ipl.ReceivePortIdentifier;
 import ibis.ipl.WriteMessage;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import nl.esciencecenter.amuse.distributed.AmuseConfiguration;
 import nl.esciencecenter.amuse.distributed.jobs.AmuseJobDescription;
-import nl.esciencecenter.amuse.distributed.jobs.FileTransfers;
 import nl.esciencecenter.amuse.distributed.jobs.ScriptJobDescription;
+import nl.esciencecenter.amuse.distributed.util.FileTransfers;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,11 +38,12 @@ import org.slf4j.LoggerFactory;
  */
 public class ScriptJobRunner extends JobRunner {
 
-    private final ScriptJobDescription description;
-    private Exception error = null;
+    private static final Logger logger = LoggerFactory.getLogger(ScriptJobRunner.class);
 
+    private final ScriptJobDescription description;
+    
     public ScriptJobRunner(AmuseJobDescription description, AmuseConfiguration configuration, ReceivePortIdentifier resultPort,
-            Ibis ibis, File tmpDir, ReadMessage message) throws Exception {
+            Ibis ibis, Path tmpDir, ReadMessage message) throws Exception {
         super(description, configuration, resultPort, ibis, tmpDir);
 
         this.description = (ScriptJobDescription) description;
@@ -54,46 +56,60 @@ public class ScriptJobRunner extends JobRunner {
 
         message.finish();
 
-        //start a thread to start handling amuse requests
-        setName("Script Job Runner for " + description);
+        Path outputDir = sandbox.resolve(this.description.getOutputDir());
+
+        Files.createDirectories(outputDir);
+
+        startProcess(buildProcessBuilder());
+
+        //start a thread to send back result when the job is done
+        setName("Script Job Runner for Job " + description.getID());
         setDaemon(true);
         start();
     }
 
-    private synchronized void setError(Exception error) {
-        this.error = error;
-    }
+    private ProcessBuilder buildProcessBuilder() throws IOException {
+        ProcessBuilder builder = new ProcessBuilder();
 
-    public synchronized Exception getError() {
-        return error;
+        builder.directory(sandbox.toFile());
+
+        Path scriptPath = sandbox.resolve(description.getScriptDir()).resolve(description.getScriptName());
+
+        Path amuseScriptPath = amuseConfiguration.getAmuseHome().getAbsoluteFile().toPath().resolve("amuse.sh");
+
+        builder.command().add(amuseScriptPath.toString());
+
+        builder.command().add(scriptPath.toString());
+
+        if (!description.getArguments().isEmpty()) {
+            for (String argument : description.getArguments().split("\\s")) {
+                builder.command().add(argument);
+            }
+        }
+
+        //remove some environment variables, if present
+        builder.environment().remove("DISPLAY");
+
+        logger.info("starting script process, command = " + builder.command());
+
+        return builder;
     }
 
     @Override
     public void run() {
-        Exception error = null;
+        waitForProcess();
+    
+        sendResult();
 
-        try {
+        deleteSandbox();
 
-            File outputDir = new File(sandbox, description.getOutputDir());
-
-            outputDir.mkdirs();
-
-            File outputFile = new File(outputDir, "script-output.txt");
-            outputFile.createNewFile();
-
-        } catch (Exception e) {
-            error = e;
-        }
-
-        sendResult(error);
     }
 
     @Override
     void writeResultData(WriteMessage writeMessage) throws IOException {
-        File outputDir = new File(sandbox, description.getOutputDir());
-        
-        FileTransfers.writeDirectory(outputDir, writeMessage);
-        
+        if (description.getOutputDir() != null) {
+            FileTransfers.writeDirectory(description.getOutputDir(), sandbox, writeMessage);
+        }
     }
 
 }

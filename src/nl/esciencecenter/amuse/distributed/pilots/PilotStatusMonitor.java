@@ -17,9 +17,6 @@ package nl.esciencecenter.amuse.distributed.pilots;
 
 import ibis.ipl.IbisIdentifier;
 import ibis.ipl.RegistryEventHandler;
-
-import java.util.UUID;
-
 import nl.esciencecenter.amuse.distributed.DistributedAmuseException;
 
 import org.slf4j.Logger;

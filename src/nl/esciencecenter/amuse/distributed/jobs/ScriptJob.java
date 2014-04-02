@@ -19,10 +19,12 @@ import ibis.ipl.Ibis;
 import ibis.ipl.ReadMessage;
 import ibis.ipl.WriteMessage;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import nl.esciencecenter.amuse.distributed.DistributedAmuseException;
+import nl.esciencecenter.amuse.distributed.util.FileTransfers;
 
 /**
  * @author Niels Drost
@@ -43,16 +45,22 @@ public class ScriptJob extends AmuseJob {
 
     @Override
     void writeJobData(WriteMessage writeMessage) throws IOException {
-        FileTransfers.writeDirectory(new File(description.getScriptDir()), writeMessage);
+        Path cwd = Paths.get("").toAbsolutePath();
+
+        FileTransfers.writeDirectory(description.getScriptDir(), cwd, writeMessage);
 
         if (description.getInputDir() != null) {
-            FileTransfers.writeDirectory(new File(description.getInputDir()), writeMessage);
+            FileTransfers.writeDirectory(description.getInputDir(), cwd, writeMessage);
         }
     }
 
     @Override
     void readJobResult(ReadMessage readMessage) throws ClassNotFoundException, IOException {
-        FileTransfers.readDirectory(new File(description.getOutputDir()), readMessage);
+
+        if (description.getOutputDir() != null) {
+            Path cwd = Paths.get("").toAbsolutePath();
+            FileTransfers.readDirectory(cwd, readMessage);
+        }
     }
 
 }

@@ -6,12 +6,15 @@ public class FunctionJobDescription extends AmuseJobDescription {
     
     private final String function;
     private final String arguments;
+    private final String kwarguments;
 
-    public FunctionJobDescription(String function, String arguments, String stdoutFile, String stderrFile, String nodeLabel) {
+
+    public FunctionJobDescription(String function, String arguments, String kwarguments, String stdoutFile, String stderrFile, String nodeLabel) {
         super(stdoutFile, stderrFile, nodeLabel);
         
         this.function = function;
         this.arguments = arguments;
+        this.kwarguments = kwarguments;
     }
 
     @Override
@@ -31,6 +34,11 @@ public class FunctionJobDescription extends AmuseJobDescription {
     public String getArguments() {
         return arguments;
     }
+    
+    public String getKwArguments() {
+        return kwarguments;
+    }
+
 
     @Override
     public String toString() {
