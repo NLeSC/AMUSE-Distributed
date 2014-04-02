@@ -103,7 +103,7 @@ public abstract class JobRunner extends Thread {
             int result = process.waitFor();
 
             if (result != 0) {
-                error = new Exception("Script ended with non-zero exit code: " + result);
+                error = new Exception("Process ended with non-zero exit code: " + result);
             }
         } catch (InterruptedException e) {
             setError(new Exception("Job Interrupted", e));
@@ -184,7 +184,7 @@ public abstract class JobRunner extends Thread {
     }
 
     protected void sendResult() {
-        logger.debug("worker done. Sending result to main amuse node.");
+        logger.debug("Job done. Sending result to main amuse node.");
 
         //send result message to job
         try {
