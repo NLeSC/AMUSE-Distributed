@@ -219,6 +219,7 @@ public class JobSet extends Thread {
     @Override
     public synchronized void run() {
         while (true) {
+            int nodesInQueue = 0;
             //find nodes for jobs to run on
             Iterator<AmuseJob> iterator = queue.iterator();
             while (iterator.hasNext()) {
@@ -233,12 +234,18 @@ public class JobSet extends Thread {
                         job.start(target);
                         //remove this job from the queue
                         iterator.remove();
+                    } else {
+                        nodesInQueue++;
                     }
                 } else {
                     //remove this job from the queue
                     iterator.remove();
                 }
 
+            }
+
+            if (nodesInQueue > 0) {
+                logger.info("Now " + nodesInQueue + " waiting in queue");
             }
 
             try {

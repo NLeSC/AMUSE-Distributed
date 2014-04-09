@@ -180,8 +180,9 @@ public abstract class AmuseJob extends Thread implements MessageUpcall {
 
     public synchronized void waitUntilDone() {
         while (!isDone()) {
+            logger.info("Waiting for {} job {} to finish, state now {}", getType(), getJobID(), getJobState());
             try {
-                wait();
+                wait(5000);
             } catch (InterruptedException e) {
                 return;
             }
@@ -206,7 +207,7 @@ public abstract class AmuseJob extends Thread implements MessageUpcall {
             return;
         }
 
-        logger.debug("Running job on target node {}", target);
+        logger.debug("Running job {} on pilot {} with label {}", getJobID(), target.getID(), target.getLabel());
 
         //set state to initializing
         setState(State.INITIALIZING);

@@ -186,7 +186,7 @@ public class WebInterface extends AbstractHandler {
         for (PilotManager pilot : distributedAmuse.pilots().getPilots()) {
             String state = pilot.getStateString();
             writer.printf("<tr><td><a href=/pilots/%s>%s</a></td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n",
-                    pilot.getID(), pilot.getID(), pilot.getNodeLabel(), pilot.getResourceName(), pilot.getNodeCount(), state);
+                    pilot.getID(), pilot.getID(), pilot.getLabel(), pilot.getResourceName(), pilot.getNodeCount(), state);
         }
         writer.println("</table>");
     }
