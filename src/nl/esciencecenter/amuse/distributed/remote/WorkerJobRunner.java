@@ -340,6 +340,8 @@ public class WorkerJobRunner extends JobRunner {
         logger.debug("Worker job done, sending result to amuse");
 
         sendResult();
+        
+        deleteSandbox();
     }
 
     @Override
