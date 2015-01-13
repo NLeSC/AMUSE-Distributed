@@ -166,7 +166,7 @@ public class WorkerConnection extends Thread {
             throw new Exception("timeout while starting worker");
         }
         
-        logger.debug("remaining time before deadline: %d", result);
+        logger.debug("remaining time before deadline: " + result);
         
         return result;
     }
