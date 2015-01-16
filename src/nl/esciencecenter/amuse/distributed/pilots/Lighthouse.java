@@ -17,10 +17,15 @@ package nl.esciencecenter.amuse.distributed.pilots;
 
 import ibis.ipl.Ibis;
 import ibis.ipl.IbisIdentifier;
+import ibis.ipl.ReceivePort;
+import ibis.ipl.SendPort;
+import ibis.ipl.WriteMessage;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+
+import nl.esciencecenter.amuse.distributed.DistributedAmuse;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,26 +57,37 @@ public class Lighthouse extends Thread {
 
             for (PilotManager pilot : pilotSet.getPilots()) {
                 if (pilot.isRunning()) {
-                    addresses.add(pilot.getIbisIdentifier());
-                }
-            }
 
-            try {
-                if (logger.isTraceEnabled()) {
-                    logger.trace("Sending ping signal to " + Arrays.toString(addresses.toArray(new IbisIdentifier[0])));
-                }
-                ibis.registry().signal("ping", addresses.toArray(new IbisIdentifier[0]));
-            } catch (IOException e) {
-                logger.error("Failed to send ping signal to pilots", e);
-            }
+                    try {
+                        if (logger.isTraceEnabled()) {
+                            logger.trace("Sending ping signal to " + Arrays.toString(addresses.toArray(new IbisIdentifier[0])));
+                        }
 
-            try {
-                Thread.sleep(5000);
-            } catch (InterruptedException e) {
-                //IGNORE
+                        SendPort sendPort = ibis.createSendPort(DistributedAmuse.MANY_TO_ONE_PORT_TYPE);
+
+                        sendPort.connect(pilot.getIbisIdentifier(), "pilot", 60000, true);
+
+                        WriteMessage writeMessage = sendPort.newMessage();
+
+                        //command
+                        writeMessage.writeString("ping");
+
+                        writeMessage.finish();
+
+                        sendPort.close();
+                    } catch (IOException e) {
+                        logger.error("Failed to send ping signal to pilot" + pilot, e);
+                    }
+
+                }
+
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException e) {
+                    //IGNORE
+                }
+                //return;
             }
-            //return;
         }
     }
-
 }
