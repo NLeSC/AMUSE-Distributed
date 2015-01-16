@@ -53,19 +53,19 @@ public class Lighthouse extends Thread {
 
     public void run() {
         while (true) {
-            ArrayList<IbisIdentifier> addresses = new ArrayList<IbisIdentifier>();
-
+            long start = System.currentTimeMillis();
+            
             for (PilotManager pilot : pilotSet.getPilots()) {
                 if (pilot.isRunning()) {
 
                     try {
                         if (logger.isTraceEnabled()) {
-                            logger.trace("Sending ping signal to " + Arrays.toString(addresses.toArray(new IbisIdentifier[0])));
+                            logger.trace("Sending ping signal to " + pilot);
                         }
 
                         SendPort sendPort = ibis.createSendPort(DistributedAmuse.MANY_TO_ONE_PORT_TYPE);
 
-                        sendPort.connect(pilot.getIbisIdentifier(), "pilot", 60000, true);
+                        sendPort.connect(pilot.getIbisIdentifier(), "pilot", 5000, true);
 
                         WriteMessage writeMessage = sendPort.newMessage();
 
@@ -81,8 +81,14 @@ public class Lighthouse extends Thread {
 
                 }
 
+                long duration = System.currentTimeMillis() - start;
+                
+                logger.debug("Lighthouse: sending pings took: " + duration + " ms");
+                
                 try {
-                    Thread.sleep(5000);
+                    if (duration < 5000) {
+                        Thread.sleep(5000 - duration);
+                    }
                 } catch (InterruptedException e) {
                     //IGNORE
                 }
